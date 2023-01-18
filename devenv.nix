@@ -35,8 +35,10 @@
 
   # https://devenv.sh/languages/
   languages = {
+    c.enable = true;
     erlang.enable = true;
     elixir.enable = true;
+    elixir.package = pkgs.elixir_1_14;
     javascript.enable = true;
     typescript.enable = true;
     deno.enable = true;

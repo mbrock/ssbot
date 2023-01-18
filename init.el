@@ -117,3 +117,8 @@
         completion-category-overrides '((file (styles partial-completion))))
 
 (marginalia-mode)
+
+(require 'eglot)
+(add-to-list 'eglot-server-programs '(elixir-mode "elixir-ls"))
+
+(add-hook 'elixir-mode-hook 'eglot-ensure)
