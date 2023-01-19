@@ -1,6 +1,8 @@
 { pkgs, ... }:
 
-{
+let
+  elixir-version = pkgs.elixir_1_14;
+in {
   # https://devenv.sh/packages/
   packages = with pkgs; [ 
     git
@@ -18,11 +20,16 @@
       vertico
       whitespace-cleanup-mode
       zenburn-theme
+      vterm
     ]))
+    inotify-tools
     jq
     ripgrep
+    screen
     sqlite
-    inotify-tools
+
+    elixir-version
+    (elixir_ls.override { elixir = elixir-version; })
   ];
 
   scripts = {
@@ -53,8 +60,6 @@
   languages = {
     c.enable = true;
     erlang.enable = true;
-    elixir.enable = true;
-    elixir.package = pkgs.elixir_1_14;
     javascript.enable = true;
     typescript.enable = true;
     deno.enable = true;

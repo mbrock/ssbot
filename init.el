@@ -3,6 +3,7 @@
 (load-theme 'zenburn t)
 
 (menu-bar-mode -1)
+(column-number-mode 1)
 
 (setq tab-always-indent 'complete)
 (setq enable-recursive-minibuffers t)
