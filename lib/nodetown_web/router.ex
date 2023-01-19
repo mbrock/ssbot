@@ -18,6 +18,13 @@ defmodule NodeTownWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+
+    live "/scrape_items", ItemLive.Index, :index
+    live "/scrape_items/new", ItemLive.Index, :new
+    live "/scrape_items/:id/edit", ItemLive.Index, :edit
+
+    live "/scrape_items/:id", ItemLive.Show, :show
+    live "/scrape_items/:id/show/edit", ItemLive.Show, :edit
   end
 
   # Other scopes may use custom stacks.

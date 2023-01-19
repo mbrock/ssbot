@@ -20,6 +20,15 @@ if System.get_env("PHX_SERVER") do
   config :nodetown, NodeTownWeb.Endpoint, server: true
 end
 
+config :openai,
+  api_key: System.get_env("OPENAI_API_KEY"),
+  http_options: [recv_timeout: 30_000]
+
+config :nodetown,
+  ssbot: [
+    telegram_token: System.get_env("TELEGRAM_API_KEY")
+  ]
+
 if config_env() == :prod do
   database_path =
     System.get_env("DATABASE_PATH") ||

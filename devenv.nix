@@ -1,9 +1,6 @@
 { pkgs, ... }:
 
 {
-  # https://devenv.sh/basics/
-  env.GREET = "devenv";
-
   # https://devenv.sh/packages/
   packages = with pkgs; [ 
     git
@@ -20,15 +17,34 @@
       typescript-mode
       vertico
       whitespace-cleanup-mode
+      zenburn-theme
     ]))
     jq
-    git
     ripgrep
+    sqlite
+    inotify-tools
   ];
 
+  scripts = {
+    nodetown.exec = ''
+      iex --name nodetown@$(hostname) --cookie nodetown \
+        -S mix phx.server
+    '';
+
+    nodetown-setup.exec = ''
+      mix do local.rebar --force, local.hex --force
+      mix escript.install hex livebook
+    '';
+    
+    nodetown-livebook.exec = ''
+      export LIVEBOOK_DEFAULT_RUNTIME=attached:nodetown@$(hostname):nodetown
+      export LIVEBOOK_PASSWORD=nodetown-$(hostname)
+      export LIVEBOOK_IP=0.0.0.0
+      livebook server
+    '';
+  };
+
   enterShell = ''
-    echo "# welcome to the bot world"
-    git --version
     export PATH="$HOME/.mix/escripts:$PATH"
     export EMACSDIR=$(pwd)
   '';
@@ -43,9 +59,6 @@
     typescript.enable = true;
     deno.enable = true;
   };
-
-  # https://devenv.sh/scripts/
-  # scripts.hello.exec = "echo hello from $GREET";
 
   # https://devenv.sh/pre-commit-hooks/
   # pre-commit.hooks.shellcheck.enable = true;
