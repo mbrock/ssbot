@@ -12,6 +12,14 @@ config :nodetown,
   ecto_repos: [NodeTown.Repo],
   generators: [binary_id: true]
 
+config :nodetown, Oban,
+  engine: Oban.Engines.Lite,
+  queues: [
+    default: 10,
+    openai: 1
+  ],
+  repo: NodeTown.Repo
+
 # Configures the endpoint
 config :nodetown, NodeTownWeb.Endpoint,
   url: [host: "localhost"],

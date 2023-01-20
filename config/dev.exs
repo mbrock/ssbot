@@ -7,6 +7,16 @@ config :nodetown, NodeTown.Repo,
   stacktrace: true,
   show_sensitive_data_on_connection_error: true
 
+config :nodetown, Oban,
+  plugins: [
+    {
+      Oban.Plugins.Cron,
+      crontab: [
+        {"*/5 8-19 * * *", NodeTown.Scrape.Worker}
+      ]
+    }
+  ]
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

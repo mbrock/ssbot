@@ -55,7 +55,13 @@ defmodule NodeTown.MixProject do
       {:kino, "~> 0.8.0"},
       {:openai, "~> 0.2.3"},
       {:telegram, github: "visciang/telegram", tag: "0.22.4"},
-      {:hackney, "~> 1.18"}
+      {:hackney, "~> 1.18"},
+      {:oban, github: "sorentwo/oban", rev: "4e1e6cf45b205fe2383fab72b2dc176d68bedb77"},
+      {:rdf, "~> 1.1"},
+      {:rdf_xml, "~> 1.0"},
+      {:json_ld, "~> 0.3"},
+      {:req, "~> 0.3"},
+      {:req_easyhtml, "~> 0.1.0"}
     ]
   end
 

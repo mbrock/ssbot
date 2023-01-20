@@ -8,18 +8,12 @@ defmodule NodeTown.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Start the Telemetry supervisor
       NodeTownWeb.Telemetry,
-      # Start the Ecto repository
       NodeTown.Repo,
-      # Start the PubSub system
       {Phoenix.PubSub, name: NodeTown.PubSub},
-      # Start Finch
       {Finch, name: NodeTown.Finch},
-      # Start the Endpoint (http/https)
+      {Oban, Application.fetch_env!(:nodetown, Oban)},
       NodeTownWeb.Endpoint
-      # Start a worker by calling: NodeTown.Worker.start_link(arg)
-      # {NodeTown.Worker, arg}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

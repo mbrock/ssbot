@@ -5,8 +5,22 @@ let
 in {
   # https://devenv.sh/packages/
   packages = with pkgs; [ 
+    screen
+    inotify-tools
+    
+    jq
+    ripgrep
+    
     git
+    sqlite
+    datasette
+
+    elixir-version
+    (elixir_ls.override { elixir = elixir-version; })
+    
     (emacsWithPackages (e: with e; [
+      company
+      datasette
       eglot
       elixir-mode
       magit
@@ -22,14 +36,6 @@ in {
       zenburn-theme
       vterm
     ]))
-    inotify-tools
-    jq
-    ripgrep
-    screen
-    sqlite
-
-    elixir-version
-    (elixir_ls.override { elixir = elixir-version; })
   ];
 
   scripts = {
@@ -48,6 +54,10 @@ in {
       export LIVEBOOK_PASSWORD=nodetown-$(hostname)
       export LIVEBOOK_IP=0.0.0.0
       livebook server
+    '';
+
+    nodetown-datasette.exec = ''
+      datasette --host 0.0.0.0 nodetown_dev.db
     '';
   };
 

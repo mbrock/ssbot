@@ -1,10 +1,6 @@
 defmodule Scrapers.SS do
-  use Crawly.Spider
-
-  @impl Crawly.Spider
   def base_url(), do: "https://www.ss.com/en/"
 
-  @impl Crawly.Spider
   def init() do
     [
       start_urls: [
@@ -13,7 +9,6 @@ defmodule Scrapers.SS do
     ]
   end
 
-  @impl Crawly.Spider
   def parse_item(response) do
     {:ok, document} = Floki.parse_document(response.body)
 
@@ -28,11 +23,34 @@ defmodule Scrapers.SS do
         }
       end)
 
-    requests =
+    # How do we identify unique ads?
+    # The URLs are not unique; they get reused after some time.
+    # So we use the URL plus the inner text of the ad's row.
+    # Hash that into a UUID...
+    rows =
       document
-      |> Floki.find(".msga2 a[href$=\".html\"]")
-      |> Floki.attribute("href")
-      |> Enum.uniq()
+      |> Floki.find("#head_line ~ tr")
+      |> Enum.map(fn tr ->
+        %{
+          url: tr |> Floki.find(".msga2 a") |> Floki.attribute("href"),
+          text: tr |> Floki.text()
+        }
+      end)
+      |> IO.inspect(label: "ss rows")
+
+    requests =
+      rows
+      |> Enum.map(fn row ->
+        uuid =
+          UUID.uuid5(:dns, "node.town")
+          |> UUID.uuid5("#{row.url}: #{row.text}")
+          |> IO.inspect(label: "row uuid")
+
+        %{url: row.url, uuid: uuid}
+      end)
+      |> Enum.filter(fn row ->
+        not NodeTown.Repo.exists?(NodeTown.Scrape.Item, row.uuid)
+      end)
       |> Crawly.Utils.build_absolute_urls(base_url())
       |> Crawly.Utils.requests_from_urls()
 

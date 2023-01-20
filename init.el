@@ -113,8 +113,10 @@
   )
 
 (vertico-mode)
-;(savehist-mode)
+(global-company-mode)
 
+;(savehist-mode)
+(require 'orderless)
 (setq completion-styles '(orderless basic)
         completion-category-defaults nil
         completion-category-overrides '((file (styles partial-completion))))
@@ -124,7 +126,13 @@
 (require 'eglot)
 (add-to-list 'eglot-server-programs '(elixir-mode "elixir-ls"))
 
-(add-hook 'elixir-mode-hook 'eglot-ensure)
+(add-hook 'elixir-mode-hook
+          (lambda ()
+            (eglot-ensure)
+            (add-hook 'before-save-hook 'eglot-format nil t)))
+
+(add-hook 'emacs-lisp-mode-hook #'enable-paredit-mode)
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
