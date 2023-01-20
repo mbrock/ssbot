@@ -1,6 +1,28 @@
 ;; -*- lexical-binding: t -*-
 
+(set-frame-font "DM Mono-16" nil t)
+(setq inhibit-splash-screen t)
+(setq frame-resize-pixelwise t)
+
+(when (fboundp 'tool-bar-mode)
+  (blink-cursor-mode -1)
+  (tool-bar-mode -1)
+  (menu-bar-mode -1)
+  (scroll-bar-mode -1))
+
+(set-fringe-mode 24)
+
+(add-hook 'after-save-hook
+          'executable-make-buffer-file-executable-if-script-p)
+
+(setq fill-nobreak-predicate '(fill-single-word-nobreak-p))
+(setq kill-whole-line t)
+(setq whitespace-style '(face trailing lines-tail empty))
+(setq uniquify-buffer-name-style 'post-forward-angle-brackets)
+
 (load-theme 'zenburn t)
+(set-face-background 'default "#000000")
+(set-face-background 'fringe "#000000")
 
 (menu-bar-mode -1)
 (column-number-mode 1)
@@ -146,3 +168,21 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+
+(defun my-zoom-in ()
+  (interactive)
+  (default-text-scale-increase))
+
+(defun my-zoom-out ()
+  (interactive)
+  (default-text-scale-decrease))
+
+(progn
+  (global-set-key (kbd "C-x C-+") 'my-zoom-in)
+  (global-set-key (kbd "C-x C--") 'my-zoom-out))
+
+(progn
+  (require 'dired)
+  (require 'dired-x)
+  (define-key dired-mode-map (kbd "r") 'wdired-change-to-wdired-mode)
+  )

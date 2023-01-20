@@ -21,8 +21,11 @@ in {
     (emacsWithPackages (e: with e; [
       company
       datasette
+      default-text-scale
+      direnv
       eglot
       elixir-mode
+      flycheck
       magit
       marginalia
       nix-mode
@@ -30,6 +33,7 @@ in {
       paredit
       projectile
       projectile-ripgrep
+      rainbow-delimiters
       typescript-mode
       vertico
       whitespace-cleanup-mode
