@@ -3,6 +3,8 @@
 let
   elixir-version = pkgs.elixir_1_14;
 in {
+  devcontainer.enable = true;
+  
   # https://devenv.sh/packages/
   packages = with pkgs; [ 
     screen
