@@ -1,0 +1,15 @@
+* node.town
+** ss.com
+*** TODO image stuff
+**** TODO download: Google Cloud bucket
+**** TODO describe: Vision API multi-object queries
+**** TODO decide: GPT-3 to select four images
+**** TODO crop: Vision API crop to square
+**** TODO send: Telegram
+
+*** GPT for ads
+**** each ad gets summarized
+**** match against desires?
+***** each group chat has a context
+****** 
+

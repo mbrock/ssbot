@@ -1,12 +1,4 @@
 defmodule NodeTown do
-  @moduledoc """
-  NodeTown keeps the contexts that define your domain
-  and business logic.
-
-  Contexts are also responsible for managing your data, regardless
-  if it comes from the database, an external API or others.
-  """
-
   defmodule SSLV do
     require Logger
 
@@ -118,5 +110,46 @@ defmodule NodeTown do
   def start_ss_gpt_job(id) do
     NodeTown.SS.GPTWorker.new(%{"id" => id})
     |> Oban.insert()
+  end
+
+  def update_search_context(context, command) do
+    prompt = """
+      [Constructing a complex search filter incrementally.]
+
+      Search filter before:
+      #{context}
+
+      Filter manipulation command:
+      #{command}
+
+      Search filter after:
+    """
+
+    text =
+      gpt3(
+        prompt: prompt,
+        temperature: 0,
+        max_tokens: 400,
+        top_p: 1.0
+      )
+
+    IO.puts(text)
+    IO.puts("")
+
+    text
+  end
+
+  def complete(model, options) do
+    {:ok, result} = OpenAI.completions(model, options)
+    %{choices: [%{"text" => text}]} = result
+    String.trim(text)
+  end
+
+  def gpt3(options) do
+    complete("text-davinci-003", options)
+  end
+
+  def codex(options) do
+    complete("code-davinci-002", options)
   end
 end

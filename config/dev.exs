@@ -12,7 +12,7 @@ config :nodetown, Oban,
     {
       Oban.Plugins.Cron,
       crontab: [
-        {"*/5 8-19 * * *", NodeTown.Scrape.Worker}
+        # {"*/5 8-19 * * *", NodeTown.Scrape.Worker}
       ]
     }
   ]
