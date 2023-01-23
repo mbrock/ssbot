@@ -3,6 +3,10 @@
 ## Section
 
 ```elixir
+NodeTown.Scrape.list_scrape_items() |> List.first()
+```
+
+```elixir
 for item <- NodeTown.Scrape.list_scrape_items() |> Enum.take(3) do
   IO.puts(item.data["summary"])
   IO.puts("")

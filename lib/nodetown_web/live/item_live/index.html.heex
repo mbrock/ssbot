@@ -8,8 +8,13 @@
 </.header>
 
 <.table id="scrape_items" rows={@scrape_items} row_click={&JS.navigate(~p"/scrape_items/#{&1}")}>
-  <:col :let={item} label="Url"><%= item.url %></:col>
-  <:col :let={item} label="Html"><%= item.html %></:col>
+  <:col :let={item} label="Date"><%= item.inserted_at %></:col>
+  <:col :let={item} label="Summary">
+    <div class="whitespace-pre-wrap">
+      <%= raw(Earmark.as_html!(item.data["summary"] || "n/a")) %>
+    </div>
+  </:col>
+  
   <:action :let={item}>
     <div class="sr-only">
       <.link navigate={~p"/scrape_items/#{item}"}>Show</.link>

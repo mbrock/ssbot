@@ -62,7 +62,8 @@ defmodule NodeTown.MixProject do
       {:json_ld, "~> 0.3"},
       {:req, "~> 0.3"},
       {:req_easyhtml, "~> 0.1.0"},
-      {:waffle_gcs, "~> 0.2"}
+      {:waffle_gcs, "~> 0.2"},
+      {:earmark, "~> 1.4"}
     ]
   end
 

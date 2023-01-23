@@ -19,6 +19,7 @@ defmodule NodeTown.Scrape do
   """
   def list_scrape_items do
     Repo.all(Item)
+    |> Enum.sort_by(& &1.inserted_at, :desc)
   end
 
   @doc """
