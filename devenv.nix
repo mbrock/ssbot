@@ -16,6 +16,7 @@ in {
     git
     sqlite
     datasette
+    litestream
 
     elixir-version
     (elixir_ls.override { elixir = elixir-version; })

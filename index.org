@@ -11,5 +11,10 @@
 **** each ad gets summarized
 **** match against desires?
 ***** each group chat has a context
-****** 
 
+** dumbo
+*** clustering, pubsub
+*** GPT-3 for automation
+**** rules
+***** natural language to formal
+***** suggest ordinary rules
