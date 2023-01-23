@@ -49,6 +49,10 @@ in {
   ];
 
   scripts = {
+    nodetown-tailscale.exec = ''
+      sudo tailscale up --accept-routes
+    '';
+    
     nodetown.exec = ''
       iex --name nodetown@$(hostname) --cookie nodetown \
         -S mix phx.server

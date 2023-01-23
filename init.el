@@ -186,3 +186,10 @@
   (require 'dired-x)
   (define-key dired-mode-map (kbd "r") 'wdired-change-to-wdired-mode)
   )
+
+(defun magit-save ()
+  (interactive)
+  (save-some-buffers)
+  (magit-git-command "git save"))
+
+(global-set-key (kbd "C-c S") 'magit-save)
