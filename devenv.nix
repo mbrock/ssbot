@@ -2,11 +2,14 @@
 
 let
   elixir-version = pkgs.elixir_1_14;
+  devtools = import ./devtools.nix { inherit pkgs; };
 in {
   devcontainer.enable = true;
   
   # https://devenv.sh/packages/
-  packages = with pkgs; [ 
+  packages = with pkgs; [
+    devtools.restless-git
+    
     screen
     inotify-tools
     
