@@ -1,9 +1,13 @@
 {
-  "image": "ghcr.io/cachix/devenv:latest",
-  "overrideCommand": false,
   "customizations": {
     "vscode": {
-      "extensions": ["mkhl.direnv"]
+      "extensions": [
+        "GitHub.copilot",
+        "JakeBecker.elixir-ls",
+        "phoenixfoundation.phoenix"
+      ]
     }
-  }
+  },
+  "image": "ghcr.io/cachix/devenv:latest",
+  "overrideCommand": false
 }

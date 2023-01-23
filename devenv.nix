@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, config, ... }:
 
 let
   elixir-version = pkgs.elixir_1_14;
@@ -84,7 +84,8 @@ in {
     export PATH="$HOME/.mix/escripts:$PATH"
     export EMACSDIR=$(pwd)
 
-
+    jq < ${devcontainer-config} \
+       > ${config.env.DEVENV_ROOT}/.devcontainer.json
   '';
 
   # https://devenv.sh/languages/
