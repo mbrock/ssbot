@@ -3,9 +3,14 @@
 let
   elixir-version = pkgs.elixir_1_14;
   devtools = import ./devtools.nix { inherit pkgs; };
+  devcontainer-config = devtools.devcontainer-config {
+    vscode-extensions = [
+      "GitHub.copilot"
+      "JakeBecker.elixir-ls"
+      "phoenixfoundation.phoenix"
+    ];
+  };
 in {
-  devcontainer.enable = true;
-  
   # https://devenv.sh/packages/
   packages = with pkgs; [
     devtools.restless-git
@@ -78,6 +83,8 @@ in {
   enterShell = ''
     export PATH="$HOME/.mix/escripts:$PATH"
     export EMACSDIR=$(pwd)
+
+
   '';
 
   # https://devenv.sh/languages/

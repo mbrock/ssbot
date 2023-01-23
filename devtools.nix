@@ -26,4 +26,13 @@
       '')
     ];
   };
+
+  devcontainer-config = { vscode-extensions }:
+    pkgs.writeText "devcontainer.json" (
+      builtins.toJSON {
+        image = "ghcr.io/cachix/devenv:latest";
+        overrideCommand = false;
+        customizations.vscode.extensions = vscode-extensions;
+      }
+    );
 }
