@@ -91,22 +91,37 @@ defmodule NodeTown.SS do
     end
   end
 
+  def gpt3_judge(item) do
+    prompt = """
+      Task: Determine whether an item matches the user's wishes.
+
+      Item description:
+      #{item.data["summary"]}
+
+      User wishes: flat bigger than 70 m^2
+
+      Output: {"matched":
+    """
+
+    NodeTown.gpt3(prompt: prompt, temperature: 0, max_tokens: 100)
+    |> IO.inspect(label: "GPT-3 judgment")
+    |> String.starts_with?("true")
+  end
+
   def notify(item) do
     token = Application.fetch_env!(:nodetown, :ssbot)[:telegram_token]
     chat_id = -753_420_060
 
-    with {:ok, gpt3} <- gpt3_describe(item) do
-      text = """
-      #{gpt3}
+    text = """
+    #{item.data["summary"]}
 
-      #{item.url}
-      """
+    #{item.url}
+    """
 
-      Telegram.Api.request(token, "sendMessage",
-        chat_id: chat_id,
-        text: text,
-        disable_web_page_preview: true
-      )
-    end
+    Telegram.Api.request(token, "sendMessage",
+      chat_id: chat_id,
+      text: text,
+      disable_web_page_preview: true
+    )
   end
 end

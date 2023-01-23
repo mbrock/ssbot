@@ -1,4 +1,6 @@
 
+.envrc.private
+
 # Devenv
 .devenv*
 devenv.local.nix

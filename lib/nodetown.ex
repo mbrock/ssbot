@@ -2,6 +2,18 @@ defmodule NodeTown do
   defmodule SSLV do
     require Logger
 
+    def do_judge(item) do
+      relevant = NodeTown.SS.gpt3_judge(item)
+      data = Map.put(item.data, :relevant, relevant)
+      {:ok, _} = NodeTown.Scrape.update_item(item, %{data: data})
+
+      relevant
+    end
+
+    def notify(item) do
+      NodeTown.SS.notify(item)
+    end
+
     def row_uuid(url, text) do
       UUID.uuid5(:dns, "node.town")
       |> UUID.uuid5("#{url}: #{text}")

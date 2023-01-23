@@ -20,8 +20,11 @@ defmodule NodeTown.SS.GPTWorker do
     IO.puts("")
 
     data = Map.put(data, :summary, summary)
+    {:ok, item} = NodeTown.Scrape.update_item(item, %{data: data})
 
-    {:ok, _} = NodeTown.Scrape.update_item(item, %{data: data})
+    if NodeTown.SSLV.do_judge(id) do
+      NodeTown.SSLV.notify(item)
+    end
   end
 
   @impl Oban.Worker

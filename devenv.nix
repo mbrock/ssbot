@@ -105,18 +105,6 @@ in {
   # processes.ping.exec = "ping example.com";
 
   processes.code-server.exec = ''
-    ${pkgs.code-server}/bin/code-server --bind-addr 127.0.0.1:5000 --auth none
+    ${pkgs.code-server}/bin/code-server --bind-addr 127.0.0.1:5000
   '';
-
-  services.caddy = {
-    enable = true;
-    email = "mikael@brockman.se";
-    virtualHosts = {
-      "nodus.whale-justice.ts.net" = {
-        extraConfig = ''
-          reverse_proxy 127.0.0.1:5000
-        '';
-      };
-    };
-  };
 }
