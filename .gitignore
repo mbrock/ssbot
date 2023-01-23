@@ -43,3 +43,6 @@ npm-debug.log
 
 # wtf is this
 /transient
+
+/*.crt
+/*.key

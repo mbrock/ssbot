@@ -4,7 +4,8 @@
       "extensions": [
         "GitHub.copilot",
         "JakeBecker.elixir-ls",
-        "phoenixfoundation.phoenix"
+        "phoenixfoundation.phoenix",
+        "mkhl.direnv"
       ]
     }
   },
