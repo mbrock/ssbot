@@ -18,3 +18,7 @@
 **** rules
 ***** natural language to formal
 ***** suggest ordinary rules
+
+* eink
+** simple way to show a PNG on urbion
+*** 

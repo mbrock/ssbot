@@ -1,0 +1,10 @@
+# E-Ink
+
+## Section
+
+```elixir
+"""
+Vi har det ganska bra!
+"""
+|> NodeTown.eink_latex!()
+```

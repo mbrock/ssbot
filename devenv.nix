@@ -26,6 +26,7 @@ in {
     sqlite
     datasette
     litestream
+    pandoc
 
     elixir-version
     (elixir_ls.override { elixir = elixir-version; })
@@ -48,10 +49,27 @@ in {
       rainbow-delimiters
       typescript-mode
       vertico
+      vterm
       whitespace-cleanup-mode
       zenburn-theme
-      vterm
+      zig-mode
     ]))
+
+    (texlive.combine {
+      inherit (texlive)
+        scheme-basic
+        ebgaramond
+        etoolbox
+        extsizes
+        parskip
+        geometry
+        crop
+        titlesec
+        xkeyval
+        fontaxes
+        dvipng
+      ;
+    })
   ];
 
   scripts = {

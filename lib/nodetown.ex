@@ -164,4 +164,77 @@ defmodule NodeTown do
   def codex(options) do
     complete("code-davinci-002", options)
   end
+
+  def eink_latex!(latex) do
+    Req.new(
+      http_errors: :raise,
+      method: :post,
+      body: latex,
+      headers: [content_type: "text/plain"]
+    )
+    |> Req.request!(url: "http://urbion/epap/DISPLAY-LATEX")
+  end
+
+  def eink!(img) do
+    Req.new(
+      http_errors: :raise,
+      method: :post,
+      body: img,
+      headers: [content_type: "image/png"]
+    )
+    |> Req.request!(url: "http://urbion/epap/DISPLAY-IMAGE")
+  end
+
+  def latex_preamble do
+    ~S"""
+    \documentclass[12pt,twocolumn]{extarticle}
+    \usepackage[
+      paperwidth=209.66mm,paperheight=157.25mm,
+      margin=0.8cm,includefoot]{geometry}
+    \usepackage[
+      width=209.66mm,height=157.25mm,center,frame,noinfo]{crop}
+    \usepackage{parskip}
+    \usepackage{ebgaramond}
+    \usepackage[sc]{titlesec}
+    \begin{document}
+    """
+  end
+
+  def latex_postamble do
+    ~S"""
+    \end{document}
+    """
+  end
+
+  def latex(src) do
+    """
+    #{latex_preamble()}
+    #{src}
+    #{latex_postamble()}
+    """
+  end
+
+  def latex_to_png_file(src) do
+    Temp.track!()
+
+    dir_path = Temp.mkdir!("nodetown-latex")
+    tex_path = Path.join(dir_path, "doc.tex") |> IO.inspect(label: :tex_path)
+    File.write!(tex_path, src)
+
+    System.cmd(
+      "latex",
+      [tex_path],
+      cd: dir_path,
+      into: IO.stream()
+    )
+
+    System.cmd(
+      "dvipng",
+      ["-D", "226.785", "doc"],
+      cd: dir_path,
+      into: IO.stream()
+    )
+
+    File.read!(Path.join(dir_path, "doc1.png"))
+  end
 end
