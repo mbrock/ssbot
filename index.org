@@ -21,4 +21,47 @@
 
 * eink
 ** simple way to show a PNG on urbion
-*** 
+ Didn't do that because of some weird issues with sending binaries.
+ But I'm sending LaTeX to urbion instead.  It renders to PNG and
+ displays.  It would make sense to do the LaTeX rendering on whichever
+ computer is fast and can install every single TeX package,
+ but whatever.
+
+* task management
+  The bot needs to understand that I have "obligations" and
+  "opportunities" and "affordances."
+
+  To do, could do, might do, should do, wanna do, must do, etc.
+
+* GenServer explorer
+  Why can't I go into a web page with a live view of all the
+  GenServers in the supervision hierarchy, including browsing
+  their state?
+
+  Maybe Livebook has something like this.  It doesn't seem like it.
+
+* error handling in bot
+  Let's say you have a group chat with several threads going on with
+  the bot doing different things... Then those threads should each be
+  separate GenServers.  We need better hierarchical process stuff.
+
+  DynamicSupervisor hierarchies feel really annoying to me, there's so
+  much boilerplate?  I want to define this stuff fluently.
+
+  Hey! Maybe it's time for behavioral threads! Or these
+  actor thingies!
+
+* long term durable threads
+  Event sourcing, right?
+
+  Just save events in SQLite, bro.
+
+  Each group chat becomes an object with a URL.
+
+  Each thread within a group chat becomes an object with a URL.
+
+  You can visit those URLs with a web browser.
+
+  You can subscribe to them with Mastodon.
+
+  

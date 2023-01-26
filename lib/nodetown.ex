@@ -340,16 +340,28 @@ defmodule NodeTown do
 
     @impl Telegram.ChatBot
     def init(_chat) do
-      {:ok, :idle}
+      {:ok, %{threads: %{}}}
     end
 
     @impl Telegram.ChatBot
     def handle_update(
-          %{"message" => %{"text" => text, "chat" => %{"id" => chat_id}}},
+          %{"message" => %{"text" => text, "chat" => %{"id" => chat_id}} = message},
           token,
           state
         ) do
-      handle_text(text, chat_id, token, state)
+      case message["reply_to_message"] do
+        %{"message_id" => reply_to_message_id} ->
+          case state.threads[reply_to_message_id] do
+            nil ->
+              {:ok, state}
+
+            continuation ->
+              handle_reply(continuation, text, chat_id, token, state)
+          end
+
+        _ ->
+          handle_text(text, chat_id, token, state)
+      end
     end
 
     def handle_update(_update, _token, state) do
@@ -359,7 +371,7 @@ defmodule NodeTown do
     def say(text, chat_id, token) do
       IO.inspect(text, label: "text")
 
-      {:ok, _} =
+      {:ok, message} =
         Telegram.Api.request(
           token,
           "sendMessage",
@@ -367,33 +379,18 @@ defmodule NodeTown do
           text: text
         )
 
-      :ok
+      message
     end
 
-    def handle_text("/gpt", chat_id, token, :idle) do
+    def handle_text("/gpt", chat_id, token, state) do
       "Give me your prompt."
       |> say(chat_id, token)
-
-      {:ok, :waiting_for_prompt}
+      |> then(fn %{"message_id" => message_id} ->
+        {:ok, put_in(state, [:threads, message_id], :await_prompt)}
+      end)
     end
 
-    def handle_text(
-          prompt,
-          chat_id,
-          token,
-          :waiting_for_prompt
-        ) do
-      NodeTown.gpt3(
-        max_tokens: 400,
-        prompt: prompt,
-        temperature: 0.0
-      )
-      |> say(chat_id, token)
-
-      {:ok, :idle}
-    end
-
-    def handle_text("/chat", chat_id, token, _state) do
+    def handle_text("/chat", chat_id, token, state) do
       synopsis = ~S"""
       I am an intelligent contextual conversation agent.
 
@@ -422,11 +419,33 @@ defmodule NodeTown do
         )
 
       say(response, chat_id, token)
-
-      {:ok, {:chat, synopsis}}
+      |> then(fn %{"message_id" => message_id} ->
+        {:ok, put_in(state, [:threads, message_id], {:chat, synopsis})}
+      end)
     end
 
-    def handle_text(text, chat_id, token, {:chat, synopsis}) do
+    def handle_text(_text, _id, _token, state) do
+      {:ok, state}
+    end
+
+    def handle_reply(
+          :await_prompt,
+          prompt,
+          chat_id,
+          token,
+          state
+        ) do
+      NodeTown.gpt3(
+        max_tokens: 400,
+        prompt: prompt,
+        temperature: 0.0
+      )
+      |> say(chat_id, token)
+
+      {:ok, state}
+    end
+
+    def handle_reply({:chat, synopsis}, text, chat_id, token, state) do
       response =
         NodeTown.gpt3(
           max_tokens: 1000,
@@ -446,7 +465,7 @@ defmodule NodeTown do
           """
         )
 
-      say(response, chat_id, token)
+      %{"message_id" => message_id} = say(response, chat_id, token)
 
       new_synopsis =
         NodeTown.gpt3(
@@ -471,10 +490,10 @@ defmodule NodeTown do
 
       # say("Synopsis: #{new_synopsis}", chat_id, token)
 
-      {:ok, {:chat, new_synopsis}}
+      {:ok, put_in(state, [:threads, message_id], {:chat, new_synopsis})}
     end
 
-    def handle_text(_text, _id, _token, state) do
+    def handle_reply(_continuation, _text, _id, _token, state) do
       {:ok, state}
     end
   end
