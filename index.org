@@ -64,4 +64,11 @@
 
   You can subscribe to them with Mastodon.
 
-  
+* crackpot theories
+  The basic fabric of this whole thing is something like a semantic
+  graph that's continuously indexed and enriched using LLMs.
+
+  So I need a decent way to store an RDF database.  I was onto that
+  the other day.
+
+  OK, I'm kinda up to speed on RDF.ex now...

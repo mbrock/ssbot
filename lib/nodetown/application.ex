@@ -14,7 +14,8 @@ defmodule NodeTown.Application do
         {Phoenix.PubSub, name: NodeTown.PubSub},
         {Finch, name: NodeTown.Finch},
         {Oban, Application.fetch_env!(:nodetown, Oban)},
-        NodeTownWeb.Endpoint
+        NodeTownWeb.Endpoint,
+        NodeTown.Graph
       ] ++
         case Application.fetch_env!(:nodetown, :ssbot)[:telegram_token] do
           nil ->

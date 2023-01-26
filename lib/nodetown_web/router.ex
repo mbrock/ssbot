@@ -25,20 +25,6 @@ defmodule NodeTownWeb.Router do
 
     live "/scrape_items/:id", ItemLive.Show, :show
     live "/scrape_items/:id/show/edit", ItemLive.Show, :edit
-
-    live "/nodes", NodeLive.Index, :index
-    live "/nodes/new", NodeLive.Index, :new
-    live "/nodes/:id/edit", NodeLive.Index, :edit
-
-    live "/nodes/:id", NodeLive.Show, :show
-    live "/nodes/:id/show/edit", NodeLive.Show, :edit
-
-    live "/edges", EdgeLive.Index, :index
-    live "/edges/new", EdgeLive.Index, :new
-    live "/edges/:id/edit", EdgeLive.Index, :edit
-
-    live "/edges/:id", EdgeLive.Show, :show
-    live "/edges/:id/show/edit", EdgeLive.Show, :edit
   end
 
   # Other scopes may use custom stacks.
