@@ -1,0 +1,7 @@
+# vector embedding stuff
+
+## Section
+
+```elixir
+index = ExFaiss.Index.new(1536, "Flat")
+```

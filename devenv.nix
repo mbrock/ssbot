@@ -27,6 +27,8 @@ in {
     datasette
     litestream
     pandoc
+    llvmPackages_11.openmp
+    faiss
 
     elixir-version
     (elixir_ls.override { elixir = elixir-version; })

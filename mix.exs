@@ -66,7 +66,11 @@ defmodule NodeTown.MixProject do
       {:waffle_gcs, "~> 0.2"},
       {:earmark, "~> 1.4"},
       {:temp, "~> 0.4"},
-      {:tz, "~> 0.24.0"}
+      {:tz, "~> 0.24.0"},
+      {:ex_faiss, github: "elixir-nx/ex_faiss"},
+      {:nx, "~> 0.4"},
+      {:exla, "~> 0.4"},
+      {:tokenizers, "~> 0.2"}
     ]
   end
 
