@@ -27,7 +27,8 @@ config :openai,
 config :nodetown,
   ssbot: [
     telegram_token: System.get_env("TELEGRAM_API_KEY")
-  ]
+  ],
+  weather_api_key: System.get_env("PIRATE_WEATHER_API_KEY")
 
 if config_env() == :prod do
   database_path =

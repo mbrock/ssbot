@@ -7,14 +7,27 @@ defmodule NodeTown.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      NodeTownWeb.Telemetry,
-      NodeTown.Repo,
-      {Phoenix.PubSub, name: NodeTown.PubSub},
-      {Finch, name: NodeTown.Finch},
-      {Oban, Application.fetch_env!(:nodetown, Oban)},
-      NodeTownWeb.Endpoint
-    ]
+    children =
+      [
+        NodeTownWeb.Telemetry,
+        NodeTown.Repo,
+        {Phoenix.PubSub, name: NodeTown.PubSub},
+        {Finch, name: NodeTown.Finch},
+        {Oban, Application.fetch_env!(:nodetown, Oban)},
+        NodeTownWeb.Endpoint
+      ] ++
+        case Application.fetch_env!(:nodetown, :ssbot)[:telegram_token] do
+          nil ->
+            []
+
+          token ->
+            [
+              {Telegram.Poller,
+               bots: [
+                 {NodeTown.TelegramBot, [token: token, max_bot_concurrency: 32]}
+               ]}
+            ]
+        end
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

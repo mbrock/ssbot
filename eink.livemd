@@ -3,8 +3,77 @@
 ## Section
 
 ```elixir
+src = NodeTown.daily_eink()
+```
+
+```elixir
+NodeTown.eink_latex!(src)
+```
+
+```elixir
+weather =
+  NodeTown.weather()
+  |> Access.get("currently")
+  |> Map.take(
+    ~w"apparentTemperature humidity icon precipIntensity precipProbability precipType summary temperature"
+  )
+  |> Map.put("time", to_string(DateTime.now!("Europe/Riga")))
+
+weather_text =
+  NodeTown.gpt3(
+    max_tokens: 300,
+    temperature: 0,
+    prompt: """
+    Given weather data, write a brief, informative summary,
+    in Latvian.
+    Write in the present tense.
+    Use casual language. Don't use excessive decimals.
+    Omit needless words like "currently".
+    Mention the current date and time, simplified.
+
+    Weather data:
+    #{inspect(weather, pretty: true)}
+
+    Summary (Latvian, Markdown):
+    """
+  )
+```
+
+```elixir
+latvian_text =
+  NodeTown.gpt3(
+    max_tokens: 500,
+    temperature: 0.5,
+    prompt: """
+    Write a short dialogue in Latvian,
+    between two named characters,
+    one male and female,
+    about some everyday topic,
+    for someone who is learning Latvian.
+
+    Level: moderate
+
+    Markdown output:
+    """
+  )
+```
+
+```elixir
+weather
+```
+
+```elixir
+text = """
+# Laiks
+#{weather_text}
+
+# Latviski
+#{latvian_text}
 """
-Vi har det ganska bra!
-"""
-|> NodeTown.eink_latex!()
+
+{:ok, src} = NodeTown.org_to_latex(text)
+
+IO.puts(src)
+
+NodeTown.eink_latex!(src)
 ```

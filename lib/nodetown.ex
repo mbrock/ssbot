@@ -152,8 +152,10 @@ defmodule NodeTown do
   end
 
   def complete(model, options) do
+    IO.inspect(options)
     {:ok, result} = OpenAI.completions(model, options)
     %{choices: [%{"text" => text}]} = result
+    IO.inspect(text)
     String.trim(text)
   end
 
@@ -236,5 +238,244 @@ defmodule NodeTown do
     )
 
     File.read!(Path.join(dir_path, "doc1.png"))
+  end
+
+  def org_to_latex(src) do
+    Temp.track!()
+
+    org_path = Temp.path!("nodetown.org")
+    File.write!(org_path, src)
+
+    case System.cmd("pandoc", ["-f", "markdown", "-t", "latex", org_path]) do
+      {org, 0} ->
+        {:ok, org}
+
+      {_, status} ->
+        {:error, {:pandoc, status}}
+    end
+  end
+
+  def weather do
+    {lat, lon} = {56.9475072, 24.1401856}
+    key = Application.fetch_env!(:nodetown, :weather_api_key)
+    url = "https://api.pirateweather.net/forecast/#{key}/#{lat},#{lon}?units=si"
+    Req.get!(url).body
+  end
+
+  def weather_gpt3(lang) do
+    weather =
+      NodeTown.weather()
+      |> Access.get("currently")
+      |> Map.take(
+        ~w"apparentTemperature humidity icon precipIntensity precipProbability precipType summary temperature"
+      )
+      |> Map.put("time", to_string(DateTime.now!("Europe/Riga")))
+
+    NodeTown.gpt3(
+      max_tokens: 300,
+      temperature: 0,
+      prompt: """
+      Given weather data, write a brief, informative summary,
+      in #{lang}.
+      Write in the present tense.
+      Use casual language. Don't use excessive decimals.
+      Omit needless words like "currently".
+      Mention the current date and time, simplified.
+
+      Weather data:
+      #{inspect(weather, pretty: true)}
+
+      Summary (#{lang}, Markdown):
+      """
+    )
+  end
+
+  def language_gpt3(lang) do
+    NodeTown.gpt3(
+      max_tokens: 500,
+      temperature: 0.5,
+      prompt: """
+      Write a short dialogue in #{lang} about some everyday topic,
+      between two named characters, one male and female,
+      for someone who is learning #{lang}.
+
+      Level: moderate
+
+      Output (Markdown blockquote, names **bold**):
+      """
+    )
+  end
+
+  def daily_eink() do
+    text = """
+    #{weather_gpt3("Latvian")}
+
+    #{language_gpt3("Latvian")}
+
+    #{weather_gpt3("Svenska")}
+
+    #{language_gpt3("Svenska")}
+    """
+
+    {:ok, src} = NodeTown.org_to_latex(text)
+
+    src
+  end
+
+  defmodule EinkWorker do
+    use Oban.Worker, queue: :openai
+
+    @impl Oban.Worker
+    def perform(%Oban.Job{}) do
+      NodeTown.daily_eink()
+      |> IO.inspect()
+      |> NodeTown.eink_latex!()
+
+      :ok
+    end
+  end
+
+  defmodule TelegramBot do
+    use Telegram.ChatBot
+
+    @impl Telegram.ChatBot
+    def init(_chat) do
+      {:ok, :idle}
+    end
+
+    @impl Telegram.ChatBot
+    def handle_update(
+          %{"message" => %{"text" => text, "chat" => %{"id" => chat_id}}},
+          token,
+          state
+        ) do
+      handle_text(text, chat_id, token, state)
+    end
+
+    def handle_update(_update, _token, state) do
+      {:ok, state}
+    end
+
+    def say(text, chat_id, token) do
+      IO.inspect(text, label: "text")
+
+      {:ok, _} =
+        Telegram.Api.request(
+          token,
+          "sendMessage",
+          chat_id: chat_id,
+          text: text
+        )
+
+      :ok
+    end
+
+    def handle_text("/gpt", chat_id, token, :idle) do
+      "Give me your prompt."
+      |> say(chat_id, token)
+
+      {:ok, :waiting_for_prompt}
+    end
+
+    def handle_text(
+          prompt,
+          chat_id,
+          token,
+          :waiting_for_prompt
+        ) do
+      NodeTown.gpt3(
+        max_tokens: 400,
+        prompt: prompt,
+        temperature: 0.0
+      )
+      |> say(chat_id, token)
+
+      {:ok, :idle}
+    end
+
+    def handle_text("/chat", chat_id, token, _state) do
+      synopsis = ~S"""
+      I am an intelligent contextual conversation agent.
+
+      I always remember a "synopsis" of my identity and the conversation thus far.
+      I know what we're talking about, and I remember important details.
+
+      I am a good listener, and I ask good questions with a coaching spirit,
+      yet I'm humble and kind of funny.
+
+      I'm always trying to find the next concrete step.
+      """
+
+      response =
+        NodeTown.gpt3(
+          max_tokens: 1000,
+          temperature: 0.7,
+          prompt: """
+          Date: #{DateTime.now!("Europe/Riga")}
+
+          # Initial synopsis
+
+          #{synopsis}
+
+          # Initial witty greeting
+          """
+        )
+
+      say(response, chat_id, token)
+
+      {:ok, {:chat, synopsis}}
+    end
+
+    def handle_text(text, chat_id, token, {:chat, synopsis}) do
+      response =
+        NodeTown.gpt3(
+          max_tokens: 1000,
+          temperature: 0.6,
+          prompt: """
+          Date: #{DateTime.now!("Europe/Riga")}
+
+          # Current synopsis
+
+          #{synopsis}
+
+          # They said
+
+          #{text}
+
+          # I say
+          """
+        )
+
+      say(response, chat_id, token)
+
+      new_synopsis =
+        NodeTown.gpt3(
+          max_tokens: 1000,
+          temperature: 0.2,
+          prompt: """
+          # Current synopsis
+
+          #{synopsis}
+
+          # They said
+
+          #{text}
+
+          # I said
+
+          #{response}
+
+          # Updated synopsis
+          """
+        )
+
+      # say("Synopsis: #{new_synopsis}", chat_id, token)
+
+      {:ok, {:chat, new_synopsis}}
+    end
+
+    def handle_text(_text, _id, _token, state) do
+      {:ok, state}
+    end
   end
 end
