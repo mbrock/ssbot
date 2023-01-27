@@ -27,7 +27,9 @@ in {
     datasette
     litestream
     pandoc
+    
     llvmPackages_11.openmp
+    blas
     faiss
 
     elixir-version
@@ -104,6 +106,8 @@ in {
   enterShell = ''
     export PATH="$HOME/.mix/escripts:$PATH"
     export EMACSDIR=$(pwd)
+    
+    export CPLUS_INCLUDE_PATH="$C_INCLUDE_PATH"
 
     jq < ${devcontainer-config} \
        > ${config.env.DEVENV_ROOT}/.devcontainer.json

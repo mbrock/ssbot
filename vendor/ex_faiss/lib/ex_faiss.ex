@@ -1,2 +1,0 @@
-defmodule ExFaiss do
-end

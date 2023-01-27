@@ -159,6 +159,21 @@ defmodule NodeTown do
     String.trim(text)
   end
 
+  def gpt3_embedding(text) do
+    key = System.get_env("OPENAI_API_KEY")
+
+    response =
+      Req.post!(
+        "https://api.openai.com/v1/embeddings",
+        headers: [authorization: "Bearer #{key}"],
+        json: %{input: text, model: "text-embedding-ada-002"}
+      )
+
+    %{"data" => [%{"embedding" => embedding}]} = response.body
+
+    {:ok, embedding |> Nx.tensor()}
+  end
+
   def gpt3(options) do
     complete("text-davinci-003", options)
   end
