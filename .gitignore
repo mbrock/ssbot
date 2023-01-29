@@ -1,3 +1,4 @@
+/nodetown.ttl
 
 .envrc.private
 
@@ -48,3 +49,4 @@ npm-debug.log
 
 /*.crt
 /*.key
+

@@ -32,6 +32,9 @@ in {
     blas
     faiss
 
+    lynx
+    links2
+
     elixir-version
     (elixir_ls.override { elixir = elixir-version; })
     
@@ -106,7 +109,9 @@ in {
   enterShell = ''
     export PATH="$HOME/.mix/escripts:$PATH"
     export EMACSDIR=$(pwd)
+    export TERM=xterm-256color
     
+    # This was necessary to install ExFaiss.
     export CPLUS_INCLUDE_PATH="$C_INCLUDE_PATH"
 
     jq < ${devcontainer-config} \

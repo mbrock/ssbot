@@ -1,11 +1,19 @@
 defmodule NodeTown.NS do
   use RDF.Vocabulary.Namespace
 
-  defvocab(Town,
-    base_iri: "https://node.town/",
-    terms: [
-      :Graph
-    ]
+  defvocab(BFO,
+    base_iri: "http://purl.obolibrary.org/obo/bfo.owl#",
+    file: "bfo.rdf"
+  )
+
+  defvocab(Net,
+    base_iri: "https://node.town/net/",
+    file: "internet-ontology.ttl"
+  )
+
+  defvocab(AI,
+    base_iri: "https://node.town/ai/",
+    file: "internet-ontology.ttl"
   )
 
   defvocab(Schema,
@@ -33,6 +41,16 @@ defmodule NodeTown.NS do
   )
 end
 
+defmodule NodeTown.Schema do
+  defmodule Discourse do
+    use Grax.Schema
+
+    schema do
+      property(:platform, NodeTown.NS.ActivityStreams.Application)
+    end
+  end
+end
+
 defmodule NodeTown.Graph do
   @data_path "nodetown.ttl"
 
@@ -58,9 +76,19 @@ defmodule NodeTown.Graph do
     end)
   end
 
+  def remember(x) do
+    :ok = update(&RDF.Graph.add(&1, x))
+    x
+  end
+
+  def query(q) do
+    graph = get()
+    RDF.Graph.query(graph, q)
+  end
+
   def base do
     RDF.Graph.build do
-      @base NodeTown.NS.Town
+      @base NodeTown.NS.Net
       @prefix as: NodeTown.NS.ActivityStreams
 
       ~I<foo#ssbot>

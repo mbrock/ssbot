@@ -1,4 +1,124 @@
-defmodule NodeTown.SS do
+defmodule Bots do
+  def html_to_text(url) do
+    {dump, 0} = System.cmd("links", ["-dump", "-width", "300", url])
+    dump
+  end
+
+  def grok(text) do
+    GPT3.complete(
+      "text-davinci-003",
+      prompt: """
+      >>> Summarize this web page.
+
+      #{text}
+
+      >>> Web page summary in English:
+      """,
+      temperature: 0,
+      max_tokens: 500
+    )
+  end
+end
+
+defmodule Bots.SSLV do
+  require Logger
+
+  def urls do
+    [
+      "https://www.ss.com/en/real-estate/flats/riga/centre/",
+      "https://www.ss.com/en/real-estate/flats/riga/maskavas-priekshpilseta/",
+      "https://www.ss.com/en/real-estate/flats/riga/grizinkalns/"
+    ]
+  end
+
+  def to_rdf do
+    urls()
+    |> Enum.map(&Bots.html_to_text/1)
+    |> Enum.map(&Bots.grok/1)
+  end
+
+  def do_judge(item) do
+    relevant = gpt3_judge(item)
+    data = Map.put(item.data, :relevant, relevant)
+    {:ok, _} = NodeTown.Scrape.update_item(item, %{data: data})
+
+    relevant
+  end
+
+  def row_uuid(url, text) do
+    UUID.uuid5(:dns, "node.town")
+    |> UUID.uuid5("#{url}: #{text}")
+    |> Ecto.UUID.cast!()
+  end
+
+  def scrape do
+    req = Req.new(http_errors: :raise)
+
+    roots =
+      Enum.map(
+        urls(),
+        &URI.parse/1
+      )
+
+    for root <- roots,
+        rows =
+          Req.get!(req, url: root).body
+          |> Floki.parse_document!()
+          |> Floki.find("#head_line ~ tr")
+          |> Enum.take(100)
+          |> Enum.map(fn tr ->
+            path =
+              tr
+              |> Floki.find(".msga2 a")
+              |> Floki.attribute("href")
+              |> List.first()
+
+            text = tr |> Floki.text(sep: "; ")
+
+            %{
+              path: path,
+              text: text
+            }
+          end)
+          |> Enum.filter(& &1.path)
+          |> Enum.map(fn %{path: path, text: text} ->
+            url = root |> URI.merge(path) |> URI.to_string()
+
+            %{
+              id: row_uuid(url, text),
+              url: url,
+              text: text
+            }
+          end),
+        %{url: url, id: id} <- rows,
+        nil == NodeTown.Repo.get(NodeTown.Scrape.Item, id, log: false),
+        item = scrape_item(req, url, id),
+        {:ok, x} = NodeTown.Scrape.create_item(item) do
+      x
+    end
+  end
+
+  def scrape_item(req, url, id) do
+    body =
+      Req.get!(req, url: url).body
+      |> Floki.parse_document!()
+
+    body
+    |> Floki.find("#content_main_div")
+    |> List.first()
+    |> then(fn root ->
+      %{
+        id: id,
+        url: url,
+        html: root |> Floki.raw_html(pretty: false),
+        data: %{}
+      }
+    end)
+    |> then(fn item ->
+      %{item | data: grok(item)}
+    end)
+  end
+
   def extract_coordinates(attr) do
     attr
     |> String.split("=")

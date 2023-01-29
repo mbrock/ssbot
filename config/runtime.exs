@@ -22,7 +22,7 @@ end
 
 config :openai,
   api_key: System.get_env("OPENAI_API_KEY"),
-  http_options: [recv_timeout: 30_000]
+  http_options: [recv_timeout: 60_000]
 
 config :nodetown,
   ssbot: [

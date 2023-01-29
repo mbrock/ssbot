@@ -72,3 +72,15 @@
   the other day.
 
   OK, I'm kinda up to speed on RDF.ex now...
+
+* more crackpot theories
+  It's all about behavioral threads, I have come to realize.
+  How pleasant!
+
+  But that's for another day, I guess.
+
+  This is really interesting.  Harel's "Can Programming Be Liberated,
+  Period?" really points in this direction.
+
+* cross-thread knowledge
+  

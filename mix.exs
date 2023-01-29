@@ -61,6 +61,7 @@ defmodule NodeTown.MixProject do
       {:rdf_xml, "~> 1.0"},
       {:json_ld, "~> 0.3"},
       {:sparql, "~> 0.3"},
+      {:grax, "~> 0.3"},
       {:req, "~> 0.3"},
       {:req_easyhtml, "~> 0.1.0"},
       {:waffle_gcs, "~> 0.2"},

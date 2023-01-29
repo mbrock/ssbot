@@ -1,0 +1,76 @@
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+@prefix bfo: <http://purl.obolibrary.org/bfo/bfo.owl#> .
+@prefix schema: <https://schema.org/> .
+@prefix as: <http://www.w3.org/ns/activitystreams#> .
+
+@prefix net: <https://node.town/net/> .
+@prefix ai: <https://node.town/ai/> .
+
+<https://node.town/net/> a owl:Ontology ;
+  rdfs:comment "Node.Town Internet Ontology 1.0"@en .
+
+### AI stuff
+
+ai:OpenAI a as:Organization ;
+  as:name "OpenAI" .
+
+ai:GPT3 a as:Service ;
+  as:name "OpenAI GPT-3" ;
+  as:partOf ai:OpenAI .
+
+ai:Codex a as:Service ;
+  as:name "OpenAI Codex" ;
+  as:partOf ai:OpenAI .
+
+ai:Model a as:Object ;
+  as:name "Model"@en .
+
+ai:GPT3TextDavinci3 a ai:Model ;
+  as:name "text-davinci-003" ;
+  as:partOf ai:GPT3 .
+
+ai:GPT3TextCurie1 a ai:Model ;
+  as:name "text-curie-001" ;
+  as:partOf ai:GPT3 .
+
+ai:GPT3TextBabbage1 a ai:Model ;
+  as:name "text-babbage-001" ;
+  as:partOf ai:GPT3 .
+
+ai:GPT3TextAda1 a ai:Model ;
+  as:name "text-ada-001" ;
+  as:partOf ai:GPT3 .
+
+ai:GPT3CodeDavinci2 a ai:Model ;
+  as:name "code-davinci-002" ;
+  as:partOf ai:Codex .
+
+ai:GPT3CodeCushman2 a ai:Model ;
+  as:name "code-cushman-002" ;
+  as:partOf ai:Codex .
+
+ai:Inference a owl:Class ;
+  rdfs:subClassOf as:Object .
+
+
+### Messenger stuff
+
+net:originPlatform a owl:ObjectProperty ;
+  rdfs:domain as:Object ;
+  rdfs:range as:Object .
+
+net:Telegram a as:Service ;
+  as:name "Telegram"@en ;
+  as:url "https://telegram.org" .
+
+net:telegramId a owl:ObjectProperty ;
+  rdfs:domain as:Object ;
+  rdfs:range xsd:integer .
+
+net:telegramData a owl:ObjectProperty ;
+  rdfs:domain as:Object ;
+  rdfs:range xsd:string .

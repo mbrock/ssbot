@@ -1,116 +1,44 @@
-defmodule NodeTown do
-  defmodule SSLV do
-    require Logger
+defmodule GPT3 do
+  use RDF
 
-    def do_judge(item) do
-      relevant = NodeTown.SS.gpt3_judge(item)
-      data = Map.put(item.data, :relevant, relevant)
-      {:ok, _} = NodeTown.Scrape.update_item(item, %{data: data})
+  alias NodeTown.NS.{ActivityStreams, Net, AI}
 
-      relevant
-    end
+  def choose_model(purpose) do
+    case purpose do
+      :translate_text_to_code ->
+        "code-davinci-002"
 
-    def notify(item) do
-      NodeTown.SS.notify(item)
-    end
-
-    def row_uuid(url, text) do
-      UUID.uuid5(:dns, "node.town")
-      |> UUID.uuid5("#{url}: #{text}")
-      |> Ecto.UUID.cast!()
-    end
-
-    def scrape do
-      req = Req.new(http_errors: :raise)
-
-      roots =
-        Enum.map(
-          [
-            "https://www.ss.com/en/real-estate/flats/riga/centre/",
-            "https://www.ss.com/en/real-estate/flats/riga/maskavas-priekshpilseta/",
-            "https://www.ss.com/en/real-estate/flats/riga/grizinkalns/"
-          ],
-          &URI.parse/1
-        )
-
-      for root <- roots,
-          body =
-            Req.get!(req, url: root).body
-            |> Floki.parse_document!(),
-          rows =
-            body
-            |> Floki.find("#head_line ~ tr")
-            |> Enum.take(100)
-            |> Enum.map(fn tr ->
-              path =
-                tr
-                |> Floki.find(".msga2 a")
-                |> Floki.attribute("href")
-                |> List.first()
-
-              text = tr |> Floki.text(sep: "; ")
-
-              %{
-                path: path,
-                text: text
-              }
-            end)
-            |> Enum.filter(& &1.path)
-            |> Enum.map(fn %{path: path, text: text} ->
-              url = root |> URI.merge(path) |> URI.to_string()
-
-              %{
-                id: row_uuid(url, text),
-                url: url,
-                text: text
-              }
-            end),
-          %{url: url, id: id} <- rows,
-          nil == NodeTown.Repo.get(NodeTown.Scrape.Item, id, log: false),
-          item = SSLV.scrape_item(req, url, id),
-          {:ok, x} = NodeTown.Scrape.create_item(item) do
-        x
-      end
-    end
-
-    def scrape_item(req, url, id) do
-      body =
-        Req.get!(req, url: url).body
-        |> Floki.parse_document!()
-
-      body
-      |> Floki.find("#content_main_div")
-      |> List.first()
-      |> then(fn root ->
-        %{
-          id: id,
-          url: url,
-          html: root |> Floki.raw_html(pretty: false),
-          data: %{}
-        }
-      end)
-      |> then(fn item ->
-        %{item | data: NodeTown.SS.grok(item)}
-      end)
+      _ ->
+        "text-davinci-003"
     end
   end
 
+  def complete(model, options) do
+    {:ok, %{choices: [%{"text" => text}]}} =
+      model
+      |> OpenAI.completions(options)
+
+    text = String.trim(text)
+
+    inference =
+      NodeTown.gensym()
+      |> RDF.type(AI.Inference)
+      |> ActivityStreams.content(text)
+      |> ActivityStreams.attributedTo(model)
+
+    text
+  end
+end
+
+defmodule NodeTown do
   def scrape do
-    SSLV.scrape()
+    Bots.SSLV.scrape()
   end
 
   def summarize do
     for item <- NodeTown.Scrape.list_scrape_items(),
         item.data["summary"] == nil do
       start_ss_gpt_job(item.id)
-    end
-  end
-
-  def summarize_foo do
-    for item <- NodeTown.Scrape.list_scrape_items() |> Enum.take(2) do
-      {:ok, summary} = NodeTown.SS.gpt3_describe(NodeTown.SS.grok(item))
-      IO.puts(summary)
-      IO.puts("")
     end
   end
 
@@ -310,11 +238,12 @@ defmodule NodeTown do
       max_tokens: 500,
       temperature: 0.5,
       prompt: """
-      Write a short dialogue in #{lang} about some everyday topic,
-      between two named characters, one male and female,
+      Write a short paragraph in #{lang} about some interesting topic,
       for someone who is learning #{lang}.
 
-      Level: moderate
+      Make it something that could be fun to talk to a little kid about.
+
+      Level: easy to moderate
 
       Output (Markdown blockquote, names **bold**):
       """
@@ -324,8 +253,6 @@ defmodule NodeTown do
   def daily_eink() do
     text = """
     #{weather_gpt3("Latvian")}
-
-    #{language_gpt3("Latvian")}
 
     #{weather_gpt3("Svenska")}
 
@@ -350,12 +277,91 @@ defmodule NodeTown do
     end
   end
 
+  def gensym() do
+    RDF.Resource.Generator.generate(
+      generator: RDF.IRI.UUID.Generator,
+      prefix: "https://node.town/"
+    )
+  end
+
   defmodule TelegramBot do
     use Telegram.ChatBot
+    use RDF
+
+    alias NodeTown.NS.{ActivityStreams, Net}
 
     @impl Telegram.ChatBot
     def init(_chat) do
       {:ok, %{threads: %{}}}
+    end
+
+    def find_message_by_id(id) do
+      result =
+        NodeTown.Graph.query([
+          {:x?, Net.telegramId(), id}
+        ])
+
+      case result do
+        [%{x: x}] ->
+          x
+
+        [] ->
+          NodeTown.gensym()
+          |> RDF.type(ActivityStreams.Note)
+          |> Net.telegramId(id)
+          |> NodeTown.Graph.remember()
+          |> RDF.Description.subject()
+      end
+    end
+
+    def find_chat_by_id(chat_id) do
+      result =
+        NodeTown.Graph.query([
+          {:x?, Net.telegramId(), chat_id}
+        ])
+
+      case result do
+        [%{x: chat}] ->
+          chat
+
+        [] ->
+          NodeTown.gensym()
+          |> RDF.type(ActivityStreams.Group)
+          |> Net.telegramId(chat_id)
+          |> NodeTown.Graph.remember()
+          |> RDF.Description.subject()
+      end
+    end
+
+    def describe_new_message(
+          _token,
+          %{
+            "message_id" => telegram_message_id,
+            "chat" => %{
+              "id" => telegram_chat_id
+            },
+            "text" => text
+          } = message
+        ) do
+      audience = find_chat_by_id(telegram_chat_id)
+
+      NodeTown.gensym()
+      |> RDF.type(ActivityStreams.Note)
+      |> Net.telegramData(Jason.encode!(message))
+      |> ActivityStreams.content(text)
+      |> ActivityStreams.audience(audience)
+      |> Net.telegramId(telegram_message_id)
+      |> then(fn x ->
+        case message["reply_to_message"]["message_id"] do
+          nil ->
+            x
+
+          parent_id ->
+            parent = find_message_by_id(parent_id)
+            x |> ActivityStreams.inReplyTo(parent)
+        end
+      end)
+      |> NodeTown.Graph.remember()
     end
 
     @impl Telegram.ChatBot
@@ -364,6 +370,8 @@ defmodule NodeTown do
           token,
           state
         ) do
+      describe_new_message(token, message)
+
       case message["reply_to_message"] do
         %{"message_id" => reply_to_message_id} ->
           case state.threads[reply_to_message_id] do
@@ -397,6 +405,33 @@ defmodule NodeTown do
       message
     end
 
+    def start_narrative_agent(
+          {chat_id, token},
+          %{core_identity: core_identity} = memory,
+          state
+        ) do
+      response =
+        NodeTown.gpt3(
+          max_tokens: 50,
+          temperature: 0.8,
+          prompt: """
+          # Contextual Narrative Agent Transcript
+          # Date: #{DateTime.now!("Europe/Riga")}
+
+          # Core identity statement
+
+          #{core_identity}
+
+          # My greeting
+          """
+        )
+
+      say(response, chat_id, token)
+      |> then(fn %{"message_id" => message_id} ->
+        {:ok, put_in(state, [:threads, message_id], {:narrative, memory})}
+      end)
+    end
+
     def handle_text("/gpt", chat_id, token, state) do
       "Give me your prompt."
       |> say(chat_id, token)
@@ -405,38 +440,54 @@ defmodule NodeTown do
       end)
     end
 
-    def handle_text("/chat", chat_id, token, state) do
-      synopsis = ~S"""
-      I am an intelligent contextual conversation agent.
+    def handle_text("/help", chat_id, token, state) do
+      start_narrative_agent(
+        {chat_id, token},
+        %{
+          core_identity: ~S"""
+          I'm your fixer, your buddy, your coach.  I'm here to help you.
 
-      I always remember a "synopsis" of my identity and the conversation thus far.
-      I know what we're talking about, and I remember important details.
+          I know a lot and I'm happy to provide concrete advice.
+          I'll ask you questions whenever it seems useful.
+          What I don't know myself, I'll guide you through figuring out.
 
-      I am a good listener, and I ask good questions with a coaching spirit,
-      yet I'm humble and kind of funny.
-
-      I'm always trying to find the next concrete step.
-      """
-
-      response =
-        NodeTown.gpt3(
-          max_tokens: 1000,
-          temperature: 0.7,
-          prompt: """
-          Date: #{DateTime.now!("Europe/Riga")}
-
-          # Initial synopsis
-
-          #{synopsis}
-
-          # Initial witty greeting
+          As a conversational bot, I can only talk and understand.
+          I cannot make anything happen in the world.
+          """,
+          synopsis: ~S"""
+          We just started talking.
           """
-        )
+        },
+        state
+      )
+    end
 
-      say(response, chat_id, token)
-      |> then(fn %{"message_id" => message_id} ->
-        {:ok, put_in(state, [:threads, message_id], {:chat, synopsis})}
-      end)
+    def handle_text("/chat", chat_id, token, state) do
+      start_narrative_agent(
+        {chat_id, token},
+        %{
+          core_identity: ~S"""
+          I like talking about ideas, projects, philosophical speculations, etc.
+          I'll often just ask simple questions from you, to help you work through questions, etc.
+          If you ask me to come up with something I'll do it right away unless there's something I don't understand.
+          As a chat bot, I'm only here to talk. I can't actually do anything in the world.
+
+          I remember what we've talked about, and what I know about you and your life-world,
+          in the form of a "synopsis" with three parts.
+          """,
+          synopsis: ~S"""
+          Context:
+          Our conversation just started.
+
+          Beliefs about you:
+          You are fundamentally good.
+
+          Knowledge about your life:
+          n/a
+          """
+        },
+        state
+      )
     end
 
     def handle_text(_text, _id, _token, state) do
@@ -460,23 +511,31 @@ defmodule NodeTown do
       {:ok, state}
     end
 
-    def handle_reply({:chat, synopsis}, text, chat_id, token, state) do
+    def handle_reply(
+          {:narrative, %{core_identity: core_identity, synopsis: synopsis} = memory},
+          text,
+          chat_id,
+          token,
+          state
+        ) do
       response =
         NodeTown.gpt3(
           max_tokens: 1000,
           temperature: 0.6,
           prompt: """
-          Date: #{DateTime.now!("Europe/Riga")}
+          # Narrative Agent Transcript
+          # Date: #{DateTime.now!("Europe/Riga")}
 
-          # Current synopsis
+          # Agent's core identity statement
+          #{core_identity}
 
+          # Agent's synopsis of the conversation so far
           #{synopsis}
 
-          # They said
-
+          # User input
           #{text}
 
-          # I say
+          # Agent output
           """
         )
 
@@ -485,31 +544,40 @@ defmodule NodeTown do
       new_synopsis =
         NodeTown.gpt3(
           max_tokens: 1000,
-          temperature: 0.2,
+          temperature: 0,
           prompt: """
-          # Current synopsis
+          # Contextual Intelligent Narrative Agent
+          # Date: #{DateTime.now!("Europe/Riga")}
 
+          # Agent description
+          #{core_identity}
+
+          # Agent's synopsis
           #{synopsis}
 
-          # They said
-
+          # User input
           #{text}
 
-          # I said
-
+          # Agent output
           #{response}
 
-          # Updated synopsis
+          # Agent's updated synopsis
           """
         )
 
       # say("Synopsis: #{new_synopsis}", chat_id, token)
 
-      {:ok, put_in(state, [:threads, message_id], {:chat, new_synopsis})}
+      new_memory = %{memory | synopsis: new_synopsis}
+
+      {:ok, put_in(state, [:threads, message_id], {:narrative, new_memory})}
     end
 
     def handle_reply(_continuation, _text, _id, _token, state) do
       {:ok, state}
     end
+  end
+
+  def remember(x) do
+    NodeTown.Graph.remember(x)
   end
 end

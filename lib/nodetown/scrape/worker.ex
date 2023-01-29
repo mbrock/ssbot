@@ -5,6 +5,7 @@ defmodule NodeTown.Scrape.Worker do
   def perform(%Oban.Job{}) do
     NodeTown.scrape()
     NodeTown.summarize()
+    :ok
   end
 end
 
@@ -13,17 +14,17 @@ defmodule NodeTown.SS.GPTWorker do
 
   def work(id) do
     item = NodeTown.Scrape.get_item!(id)
-    data = NodeTown.SS.grok(item)
+    data = Bots.SSLV.grok(item)
 
-    {:ok, summary} = NodeTown.SS.gpt3_describe(data)
+    {:ok, summary} = Bots.SSLV.gpt3_describe(data)
     IO.puts(summary)
     IO.puts("")
 
     data = Map.put(data, :summary, summary)
     {:ok, item} = NodeTown.Scrape.update_item(item, %{data: data})
 
-    if NodeTown.SSLV.do_judge(id) do
-      NodeTown.SSLV.notify(item)
+    if Bots.SSLV.do_judge(id) do
+      Bots.SSLV.notify(item)
     end
   end
 
