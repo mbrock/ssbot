@@ -13,6 +13,10 @@ defmodule GPT3 do
     end
   end
 
+  def estimate_tokens(txt) do
+    String.length(txt) / 4.0
+  end
+
   def complete(model, options) do
     {:ok, %{choices: [%{"text" => text}]}} =
       model
@@ -510,6 +514,18 @@ defmodule NodeTown do
 
       {:ok, state}
     end
+
+    # def handle_reply(
+    #       {:eval, {_x, bs}},
+    #       src,
+    #       id,
+    #       tok,
+    #       s
+    #     ) do
+    #   {x, bs} = Code.eval_string(src, bs)
+    #   r = say(inspect(x, pretty: true), id, tok)
+    #   {:ok, put_in(s, [:threads, r["message_id"]], {:eval, {x, bs}})}
+    # end
 
     def handle_reply(
           {:narrative, %{core_identity: core_identity, synopsis: synopsis} = memory},
