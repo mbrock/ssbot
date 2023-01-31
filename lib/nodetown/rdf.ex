@@ -55,6 +55,7 @@ defmodule NodeTown.Graph do
   @data_path "nodetown.ttl"
 
   require RDF.Graph
+  require Logger
 
   use Agent
 
@@ -77,6 +78,7 @@ defmodule NodeTown.Graph do
   end
 
   def remember(x) do
+    Logger.debug("remembering #{inspect(x, pretty: true)}")
     :ok = update(&RDF.Graph.add(&1, x))
     x
   end

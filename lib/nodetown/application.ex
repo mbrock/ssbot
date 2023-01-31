@@ -15,7 +15,8 @@ defmodule NodeTown.Application do
         {Finch, name: NodeTown.Finch},
         {Oban, Application.fetch_env!(:nodetown, Oban)},
         NodeTownWeb.Endpoint,
-        NodeTown.Graph
+        NodeTown.Graph,
+        GPT3
       ] ++
         case Application.fetch_env!(:nodetown, :ssbot)[:telegram_token] do
           nil ->

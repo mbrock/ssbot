@@ -19,6 +19,8 @@ defmodule NodeTownWeb.Router do
 
     get "/", PageController, :home
 
+    live "/graph", GraphLive.Index, :index
+
     live "/scrape_items", ItemLive.Index, :index
     live "/scrape_items/new", ItemLive.Index, :new
     live "/scrape_items/:id/edit", ItemLive.Index, :edit

@@ -5,8 +5,8 @@ defmodule Bots do
   end
 
   def grok(text) do
-    GPT3.complete(
-      "text-davinci-003",
+    GPT3.complete!(
+      model: "text-davinci-003",
       prompt: """
       >>> Summarize this web page.
 
@@ -223,7 +223,12 @@ defmodule Bots.SSLV do
       Output: {"matched":
     """
 
-    NodeTown.gpt3(prompt: prompt, temperature: 0, max_tokens: 100)
+    GPT3.complete!(
+      model: "text-davinci-003",
+      prompt: prompt,
+      temperature: 0,
+      max_tokens: 100
+    )
     |> IO.inspect(label: "GPT-3 judgment")
     |> String.starts_with?("true")
   end

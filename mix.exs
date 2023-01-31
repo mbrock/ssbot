@@ -71,7 +71,8 @@ defmodule NodeTown.MixProject do
       {:ex_faiss, github: "elixir-nx/ex_faiss"},
       {:nx, "~> 0.4"},
       {:exla, "~> 0.4"},
-      {:tokenizers, "~> 0.2"}
+      {:tokenizers, "~> 0.2"},
+      {:retry, "~> 0.17"}
     ]
   end
 

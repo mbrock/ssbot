@@ -12,8 +12,8 @@ config :nodetown, Oban,
     {
       Oban.Plugins.Cron,
       crontab: [
-        {"*/30 8-23 * * *", NodeTown.EinkWorker}
-        # {"*/5 8-19 * * *", NodeTown.Scrape.Worker}
+        {"*/30 8-23 * * *", EInk.Worker},
+        {"*/5 8-19 * * *", NodeTown.Scrape.Worker}
       ]
     }
   ]

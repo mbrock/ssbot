@@ -56,6 +56,23 @@ ai:GPT3CodeCushman2 a ai:Model ;
 ai:Inference a owl:Class ;
   rdfs:subClassOf as:Object .
 
+ai:TextCompletion a owl:Class ;
+  rdfs:subClassOf ai:Inference .
+
+ai:Embedding a owl:Class ;
+  rdfs:subClassOf ai:Inference .
+
+ai:input a owl:FunctionalProperty, owl:DatatypeProperty ;
+  rdfs:domain ai:Inference ;
+  rdfs:range xsd:string .
+
+ai:output a owl:FunctionalProperty, owl:DatatypeProperty ;
+  rdfs:domain ai:Inference ;
+  rdfs:range xsd:string .
+
+ai:model a owl:FunctionalProperty, owl:ObjectProperty ;
+  rdfs:domain ai:Inference ;
+  rdfs:range ai:Model .
 
 ### Messenger stuff
 
