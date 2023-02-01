@@ -72,7 +72,8 @@ defmodule NodeTown.MixProject do
       {:nx, "~> 0.4"},
       {:exla, "~> 0.4"},
       {:tokenizers, "~> 0.2"},
-      {:retry, "~> 0.17"}
+      {:retry, "~> 0.17"},
+      {:phoenix_inline_svg, "~> 1.4"}
     ]
   end
 

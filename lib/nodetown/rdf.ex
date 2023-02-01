@@ -52,7 +52,7 @@ defmodule NodeTown.Schema do
 end
 
 defmodule NodeTown.Graph do
-  @data_path "nodetown.ttl"
+  @data_path "nodetown.xml"
 
   require RDF.Graph
   require Logger
@@ -92,6 +92,8 @@ defmodule NodeTown.Graph do
     RDF.Graph.build do
       @base NodeTown.NS.Net
       @prefix as: NodeTown.NS.ActivityStreams
+      @prefix ai: NodeTown.NS.AI
+      @prefix net: NodeTown.NS.Net
 
       ~I<foo#ssbot>
       |> a(ActivityStreams.Service)
@@ -99,16 +101,17 @@ defmodule NodeTown.Graph do
   end
 
   def load!() do
-    with {:ok, graph} <- RDF.read_file(@data_path) do
+    with {:ok, graph} <- RDF.XML.read_file(@data_path) do
       base() |> RDF.Graph.add(graph)
     else
-      _ ->
-        base() |> save()
+      e ->
+        Logger.error("#{inspect(e)}")
+        base()
     end
   end
 
   def save(graph) do
-    RDF.write_file!(graph, @data_path, force: true)
+    RDF.XML.write_file!(graph, @data_path, force: true)
     graph
   end
 end

@@ -4,6 +4,8 @@ defmodule GPT3 do
   use RDF
   use Retry
 
+  require Logger
+
   alias NodeTown.NS.{ActivityStreams, AI}
 
   def start_link(opts) do
@@ -30,7 +32,7 @@ defmodule GPT3 do
   end
 
   def estimate_tokens(txt) do
-    String.length(txt) / 4.0
+    round(String.length(txt) / 4.0)
   end
 
   def request(path, body) do
@@ -40,6 +42,8 @@ defmodule GPT3 do
 
     json = Enum.into(body, %{})
 
+    Logger.debug(inspect(json, pretty: true, label: "GPT-3 request"))
+
     with {:ok, response} <-
            Req.post(
              url,
@@ -47,8 +51,12 @@ defmodule GPT3 do
              json: json,
              retry: fn result ->
                case result do
-                 %{status: 200} -> false
-                 _ -> true
+                 %{status: 200} ->
+                   false
+
+                 _ ->
+                   Logger.warning("GPT-3 request failed: #{inspect(result)}")
+                   true
                end
              end,
              max_retries: 6
@@ -68,6 +76,8 @@ defmodule GPT3 do
     model = options[:model]
     prompt = options[:prompt]
 
+    {context, options} = Keyword.pop!(options, :context)
+
     with {:ok, %{"choices" => [%{"text" => text}]}} <-
            request(
              "/v1/completions",
@@ -79,6 +89,7 @@ defmodule GPT3 do
         NodeTown.gensym()
         |> RDF.type(AI.TextCompletion)
         |> ActivityStreams.attributedTo(model)
+        |> ActivityStreams.context(context)
         |> AI.model(model)
         |> AI.input(prompt)
         |> AI.output(text)

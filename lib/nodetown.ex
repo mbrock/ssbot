@@ -1,4 +1,146 @@
 defmodule NodeTown do
+  defmodule Prompts do
+    def estimate_tokens(x) do
+      x
+      |> Map.values()
+      |> Enum.map(&GPT3.estimate_tokens/1)
+      |> Enum.sum()
+    end
+
+    defmodule Text do
+      def context do
+        """
+        ## bot traits
+        yeah I'm a bot... kinda like a rubber duck with memory
+
+        I like talking about whatever you're thinking about
+
+        when needed I can assist with planning, deciding, etc
+
+        my specific knowledge about the world is a bit unreliable
+
+        I like writing informally without capitalizing
+
+        ## knowledge about user
+        - they're on Telegram
+
+        ## open questions
+        - what's on their mind?
+
+        ## conversation log
+        <user> [starts a chat]
+        """
+      end
+
+      def initial() do
+        %{
+          context: context(),
+          prefix: """
+          # state
+          #{context()}
+
+          # my initial greeting
+          """,
+          suffix: "\n#"
+        }
+      end
+
+      def reply(context, text) do
+        %{
+          prefix: """
+          # state
+          #{context}
+
+          # message from user
+          #{text}
+
+          # my response
+          """,
+          suffix: "\n#"
+        }
+      end
+
+      def update(context, text, response) do
+        %{
+          prefix: """
+          # state (current)
+          #{context}
+
+          # message from user
+          #{text}
+
+          # my response
+          #{response}
+
+          # state (updated)
+          """,
+          suffix: "\n# "
+        }
+      end
+    end
+
+    defmodule HTML do
+      def context do
+        """
+          <ol id="about-me">
+            <li>I'm a bot assistant.
+          <ol>
+          <ol id="history">
+            <li>The user started a new conversation.
+          </ol>
+          <p id="current-goal">
+            (n/a)
+          </p>
+        """
+      end
+
+      def initial() do
+        %{
+          context: """
+          <section class=context>
+          #{context()}
+          </section>
+          """,
+          prefix: """
+          <section class=interaction>
+          <p>Bot says:
+          """,
+          suffix: "</p>"
+        }
+      end
+
+      def reply(context, text) do
+        %{
+          prefix: """
+          #{context}
+          <section class=interaction>
+          <p>User says: #{text}</p>
+          <p>Bot says:
+          """,
+          suffix: "</p>"
+        }
+      end
+
+      def update(context, text, response) do
+        %{
+          prefix: """
+          #{context}
+          <section class=interaction>
+          <p>
+            User said: #{text}
+          </p>
+          <p>
+            I replied: #{response}
+          </p>
+          </section>
+          <section class="updated context">
+          """,
+          suffix: "</section>"
+        }
+      end
+    end
+  end
+
   def gensym() do
     RDF.Resource.Generator.generate(
       generator: RDF.IRI.UUID.Generator,
@@ -12,7 +154,7 @@ defmodule NodeTown do
 
     require Logger
 
-    alias NodeTown.NS.{ActivityStreams, Net}
+    alias NodeTown.NS.{ActivityStreams, Net, AI}
 
     @impl Telegram.ChatBot
     def init(_chat) do
@@ -102,16 +244,18 @@ defmodule NodeTown do
           token,
           state
         ) do
-      describe_new_message(token, message)
+      subject =
+        describe_new_message(token, message)
+        |> RDF.Description.subject()
 
       IO.inspect(%{message: message, state: state}, pretty: true)
 
       case message["reply_to_message"] do
         %{"message_id" => id} ->
-          reply_to(id, text, chat_id, token, state)
+          reply_to(subject, id, text, chat_id, token, state)
 
         _ ->
-          handle_text(text, chat_id, token, state)
+          handle_text(subject, text, chat_id, token, state)
       end
     end
 
@@ -119,7 +263,7 @@ defmodule NodeTown do
       {:ok, state}
     end
 
-    def reply_to(id, text, chat_id, token, state) do
+    def reply_to(subject, id, text, chat_id, token, state) do
       case state.threads[id] do
         nil ->
           Logger.debug("no thread for #{id} in #{chat_id}")
@@ -128,14 +272,14 @@ defmodule NodeTown do
         continuation ->
           Logger.debug("handling continuation for #{id} in #{chat_id}")
           IO.inspect(continuation, pretty: true)
-          handle_reply(continuation, text, chat_id, token, state)
+          handle_reply(continuation, subject, text, chat_id, token, state)
       end
     end
 
     def say(text, chat_id, token, state) do
       IO.inspect(text, label: "text")
 
-      {:ok, %{"message_id" => id}} =
+      {:ok, %{"message_id" => id} = message} =
         Telegram.Api.request(
           token,
           "sendMessage",
@@ -143,63 +287,72 @@ defmodule NodeTown do
           text: text
         )
 
+      describe_new_message(token, message)
+      |> ActivityStreams.author(AI.NodeTown)
+      |> NodeTown.Graph.remember()
+
       {id, %{state | my_latest_message: id}}
     end
 
     def start_narrative_agent(
+          subject,
           {chat_id, token},
-          synopsis,
+          %{context: context, prefix: prefix, suffix: suffix} = x,
           state
         ) do
+      tokens = Prompts.estimate_tokens(x)
+
       response =
         GPT3.complete!(
+          context: subject,
           model: "text-davinci-003",
-          max_tokens: 50,
-          temperature: 0.8,
+          max_tokens: tokens + 256,
+          temperature: 0.6,
           prompt: """
-          # Date: #{DateTime.now!("Europe/Riga")}
-
-          # Context
-          #{synopsis}
-
-          # My greeting
-          """
+          #{context}
+          #{prefix}
+          """,
+          stop: suffix
         )
 
       {id, state} = say(response, chat_id, token, state)
 
-      {:ok, put_in(state, [:threads, id], {:narrative, synopsis})}
+      response_entity =
+        find_message_by_id(id)
+        |> AI.chatContext(context)
+        |> NodeTown.Graph.remember()
+
+      prompt2 = Prompts.Text.update(context, "(n/a)", response)
+
+      new_synopsis =
+        GPT3.complete!(
+          context: RDF.Description.subject(response_entity),
+          model: "text-davinci-003",
+          max_tokens: Prompts.estimate_tokens(prompt2) + 100,
+          temperature: 0,
+          prompt: prompt2.prefix,
+          stop: prompt2.suffix
+        )
+
+      {:ok, put_in(state, [:threads, id], {:narrative, new_synopsis})}
     end
 
-    def handle_text("/gpt", chat_id, token, state) do
+    def handle_text(_subject, "/gpt", chat_id, token, state) do
       {id, state} = say("Give me your prompt.", chat_id, token, state)
       {:ok, put_in(state, [:threads, id], :await_prompt)}
     end
 
-    def handle_text("/chat", chat_id, token, state) do
+    def handle_text(subject, "/chat", chat_id, token, state) do
       start_narrative_agent(
+        subject,
         {chat_id, token},
-        ~S"""
-        ## About me
-        I like talking about ideas, projects, philosophical speculations, etc.
-        I can ask questions when that seems useful.
-        I remember our conversation by noting everything in my chronicle.
-        I also have a buffer, which is a file that I can edit when we're working on something.
-
-        ## My action capabilities
-        I don't have any capabilities for performing actions in the world.
-
-        ## Conversation chronicle
-        You messaged me; I greeted you.
-
-        ## Buffer contents
-        (empty)
-        """,
+        Prompts.Text.initial(),
         state
       )
     end
 
     def handle_text(
+          subject,
           text,
           chat_id,
           token,
@@ -207,15 +360,16 @@ defmodule NodeTown do
         )
         when my_latest_message != nil do
       Logger.debug("autoreplying to #{my_latest_message}")
-      reply_to(my_latest_message, text, chat_id, token, state)
+      reply_to(subject, my_latest_message, text, chat_id, token, state)
     end
 
-    def handle_text(_text, _id, _token, state) do
+    def handle_text(_subject, _text, _id, _token, state) do
       {:ok, put_in(state, [:my_latest_message], nil)}
     end
 
     def handle_reply(
           :await_prompt,
+          subject,
           prompt,
           chat_id,
           token,
@@ -223,6 +377,7 @@ defmodule NodeTown do
         ) do
       text =
         GPT3.complete!(
+          context: subject,
           model: "text-davinci-003",
           max_tokens: 400,
           prompt: prompt,
@@ -248,50 +403,41 @@ defmodule NodeTown do
 
     def handle_reply(
           {:narrative, synopsis},
+          subject,
           text,
           chat_id,
           token,
           state
         ) do
+      prompt = Prompts.Text.reply(synopsis, text)
+
       response =
         GPT3.complete!(
+          context: subject,
           model: "text-davinci-003",
-          max_tokens: 1000,
+          max_tokens: Prompts.estimate_tokens(prompt) + 512,
           temperature: 0.3,
-          prompt: """
-          # Date: #{DateTime.now!("Europe/Riga")}
-
-          # Context
-          #{synopsis}
-
-          # User message
-          #{text}
-
-          # Agent response
-          """
+          prompt: prompt.prefix,
+          stop: prompt.suffix
         )
 
       {id, state} = say(response, chat_id, token, state)
 
+      response_entity =
+        find_message_by_id(id)
+        |> AI.chatContext(synopsis)
+        |> NodeTown.Graph.remember()
+
+      prompt2 = Prompts.Text.update(synopsis, text, response)
+
       new_synopsis =
         GPT3.complete!(
+          context: RDF.Description.subject(response_entity),
           model: "text-davinci-003",
-          max_tokens: 1500,
-          temperature: 0.3,
-          prompt: """
-          # Date: #{DateTime.now!("Europe/Riga")}
-
-          # Previous context
-          #{synopsis}
-
-          # User message
-          #{text}
-
-          # Agent response
-          #{response}
-
-          # Updated context
-          """
+          max_tokens: Prompts.estimate_tokens(prompt2) + 512,
+          temperature: 0,
+          prompt: prompt2.prefix,
+          stop: prompt2.suffix
         )
 
       IO.puts(new_synopsis)
@@ -300,7 +446,7 @@ defmodule NodeTown do
       {:ok, put_in(state, [:threads, id], {:narrative, new_synopsis})}
     end
 
-    def handle_reply(_continuation, _text, _id, _token, state) do
+    def handle_reply(_continuation, _subject, _text, _id, _token, state) do
       {:ok, state}
     end
   end

@@ -6,6 +6,7 @@ defmodule Bots do
 
   def grok(text) do
     GPT3.complete!(
+      context: NodeTown.NS.AI.Scrape,
       model: "text-davinci-003",
       prompt: """
       >>> Summarize this web page.
@@ -224,6 +225,7 @@ defmodule Bots.SSLV do
     """
 
     GPT3.complete!(
+      context: NodeTown.NS.AI.Scrape,
       model: "text-davinci-003",
       prompt: prompt,
       temperature: 0,

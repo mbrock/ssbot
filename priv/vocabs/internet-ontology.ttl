@@ -74,6 +74,22 @@ ai:model a owl:FunctionalProperty, owl:ObjectProperty ;
   rdfs:domain ai:Inference ;
   rdfs:range ai:Model .
 
+### Conversation agents
+
+ai:chatContext a owl:DatatypeProperty ;
+  rdfs:domain as:Note ;
+  rdfs:range xsd:string .
+
+ai:NodeTown a as:Service ;
+  as:name "Node.Town" ;
+  as:url "https://node.town" .
+
+ai:Weather a as:Service .
+
+ai:EInk a as:Service .
+
+ai:Scrape a as:Service .
+
 ### Messenger stuff
 
 net:originPlatform a owl:ObjectProperty ;

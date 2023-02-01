@@ -103,13 +103,13 @@ defmodule EInk do
       )
       |> Map.put("time", to_string(DateTime.now!("Europe/Riga")))
 
-    GPT3.complete!(%{
+    GPT3.complete!(
+      context: NodeTown.NS.AI.Weather,
       model: "text-davinci-003",
       max_tokens: 300,
       temperature: 0,
       prompt: """
-      Given weather data, write a brief, informative summary,
-      in #{lang}.
+      Given weather data, write a brief, informative summary, in #{lang}.
       Write in the present tense.
       Use casual language. Don't use excessive decimals.
       Omit needless words like "currently".
@@ -120,11 +120,12 @@ defmodule EInk do
 
       Summary (#{lang}, Markdown):
       """
-    })
+    )
   end
 
   def language_gpt3(lang) do
-    GPT3.complete!(%{
+    GPT3.complete!(
+      context: NodeTown.NS.AI.EInk,
       model: "text-davinci-003",
       max_tokens: 500,
       temperature: 0.5,
@@ -132,22 +133,20 @@ defmodule EInk do
       Write a short paragraph in #{lang} about some interesting topic,
       for someone who is learning #{lang}.
 
-      Make it something that could be fun to talk to a little kid about.
-
       Level: easy to moderate
 
       Output (Markdown blockquote, names **bold**):
       """
-    })
+    )
   end
 
   def daily_eink() do
     text = """
     #{weather_gpt3("Latvian")}
 
-    #{weather_gpt3("Svenska")}
+    #{weather_gpt3("Swedish")}
 
-    #{language_gpt3("Svenska")}
+    #{language_gpt3("Swedish")}
     """
 
     {:ok, src} = org_to_latex(text)
