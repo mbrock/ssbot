@@ -7,22 +7,47 @@ index = ExFaiss.Index.new(1536, "Flat")
 ```
 
 ```elixir
-{:ok, ecar} = NodeTown.gpt3_embedding("car")
-{:ok, edog} = NodeTown.gpt3_embedding("dog")
-{:ok, epuppy} = NodeTown.gpt3_embedding("puppy")
+tensors =
+  NodeTown.Graph.get()
+  |> RDF.Data.descriptions()
+  |> Enum.filter(& &1[NodeTown.NS.ActivityStreams.content()])
+  |> Enum.map(fn x ->
+    text =
+      x[NodeTown.NS.ActivityStreams.content()]
+      |> Enum.map(&RDF.Literal.value/1)
+      |> List.first()
 
-all = [ecar, edog, epuppy] |> Enum.map(&Nx.tensor/1)
+    tensor =
+      text
+      |> GPT3.embedding!()
+      |> Nx.tensor()
+
+    {text, tensor}
+  end)
 ```
 
 ```elixir
-index = Enum.reduce(all, index, &ExFaiss.Index.add(&2, &1))
+index =
+  Enum.reduce(tensors, {0, index}, fn {_text, tensor}, {i, idx} ->
+    {i + 1, ExFaiss.Index.add(idx, tensor)}
+  end)
 ```
 
 ```elixir
-ExFaiss.Index.get_num_vectors(index)
+{_, index} = index
 ```
 
 ```elixir
-{:ok, evovve} = NodeTown.gpt3_embedding("CIA")
-ExFaiss.Index.search(index, evovve, 3)
+food = GPT3.embedding!("philosophy")
+similar = ExFaiss.Index.search(index, food, 15)
+
+similar.labels
+|> Nx.to_flat_list()
+|> Enum.map(fn i -> Enum.at(tensors, i) end)
+|> Enum.map(fn {text, _} -> text end)
+|> Enum.each(&IO.puts/1)
+```
+
+```elixir
+
 ```

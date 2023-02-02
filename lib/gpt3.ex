@@ -111,12 +111,21 @@ defmodule GPT3 do
         model: "text-embedding-ada-002"
       })
 
-    inference =
-      NodeTown.gensym()
-      |> RDF.type(AI.Embedding)
-      |> AI.input(text)
-      |> AI.output(Jason.encode!(embedding))
+    NodeTown.gensym()
+    |> RDF.type(AI.Embedding)
+    |> ActivityStreams.published(DateTime.now!("Etc/UTC"))
+    |> AI.input(text)
+    |> AI.output(Jason.encode!(embedding))
 
     embedding |> Nx.tensor()
+  end
+
+  def image!(prompt) do
+    {:ok, %{"data" => [%{"url" => url}]}} =
+      request("/v1/images/generations", %{
+        prompt: prompt
+      })
+
+    url
   end
 end

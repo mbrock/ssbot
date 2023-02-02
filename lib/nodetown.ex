@@ -11,15 +11,15 @@ defmodule NodeTown do
       def context do
         """
         ## bot traits
-        yeah I'm a bot... kinda like a rubber duck with memory
+        I like talking about whatever you're thinking about.
 
-        I like talking about whatever you're thinking about
+        When needed I can assist with planning, deciding, etc.
 
-        when needed I can assist with planning, deciding, etc
+        ## capabilities
+        I can perform actions by just mentioning the following tags in my output:
 
-        my specific knowledge about the world is a bit unreliable
-
-        I like writing informally without capitalizing
+        - to make a picture, drawing, photo, etc, I can do e.g.
+          - <action:show "drawing of a happy dog, very beautiful, realistic">
 
         ## knowledge about user
         - they're on Telegram
@@ -210,8 +210,7 @@ defmodule NodeTown do
             "message_id" => telegram_message_id,
             "chat" => %{
               "id" => telegram_chat_id
-            },
-            "text" => text
+            }
           } = message
         ) do
       audience = find_chat_by_id(telegram_chat_id)
@@ -219,9 +218,7 @@ defmodule NodeTown do
       timestamp = DateTime.now!("Etc/UTC")
 
       NodeTown.gensym()
-      |> RDF.type(ActivityStreams.Note)
       |> Net.telegramData(Jason.encode!(message))
-      |> ActivityStreams.content(text)
       |> ActivityStreams.audience(audience)
       |> ActivityStreams.published(timestamp)
       |> Net.telegramId(telegram_message_id)
@@ -233,6 +230,20 @@ defmodule NodeTown do
           parent_id ->
             parent = find_message_by_id(parent_id)
             x |> ActivityStreams.inReplyTo(parent)
+        end
+      end)
+      |> then(fn x ->
+        case message do
+          %{"text" => text} ->
+            x
+            |> RDF.type(ActivityStreams.Note)
+            |> ActivityStreams.content(text)
+
+          %{"caption" => caption} ->
+            x
+            |> RDF.type(ActivityStreams.Image)
+            |> AI.input(caption)
+            |> ActivityStreams.name(caption)
         end
       end)
       |> NodeTown.Graph.remember()
@@ -276,6 +287,16 @@ defmodule NodeTown do
       end
     end
 
+    def spinner(action, chat_id, token) do
+      {:ok, _} =
+        Telegram.Api.request(
+          token,
+          "sendChatAction",
+          chat_id: chat_id,
+          action: action
+        )
+    end
+
     def say(text, chat_id, token, state) do
       IO.inspect(text, label: "text")
 
@@ -300,6 +321,7 @@ defmodule NodeTown do
           %{context: context, prefix: prefix, suffix: suffix} = x,
           state
         ) do
+      spinner("typing", chat_id, token)
       tokens = Prompts.estimate_tokens(x)
 
       response =
@@ -324,6 +346,8 @@ defmodule NodeTown do
 
       prompt2 = Prompts.Text.update(context, "(n/a)", response)
 
+      spinner("typing", chat_id, token)
+
       new_synopsis =
         GPT3.complete!(
           context: RDF.Description.subject(response_entity),
@@ -335,6 +359,11 @@ defmodule NodeTown do
         )
 
       {:ok, put_in(state, [:threads, id], {:narrative, new_synopsis})}
+    end
+
+    def handle_text(_subject, "/show " <> prompt, chat_id, token, state) do
+      show_picture(prompt, chat_id, token)
+      {:ok, state}
     end
 
     def handle_text(_subject, "/gpt", chat_id, token, state) do
@@ -375,6 +404,8 @@ defmodule NodeTown do
           token,
           state
         ) do
+      spinner("typing", chat_id, token)
+
       text =
         GPT3.complete!(
           context: subject,
@@ -389,18 +420,6 @@ defmodule NodeTown do
       {:ok, state}
     end
 
-    # def handle_reply(
-    #       {:eval, {_x, bs}},
-    #       src,
-    #       id,
-    #       tok,
-    #       s
-    #     ) do
-    #   {x, bs} = Code.eval_string(src, bs)
-    #   r = say(inspect(x, pretty: true), id, tok)
-    #   {:ok, put_in(s, [:threads, r["message_id"]], {:eval, {x, bs}})}
-    # end
-
     def handle_reply(
           {:narrative, synopsis},
           subject,
@@ -410,6 +429,8 @@ defmodule NodeTown do
           state
         ) do
       prompt = Prompts.Text.reply(synopsis, text)
+
+      spinner("typing", chat_id, token)
 
       response =
         GPT3.complete!(
@@ -421,18 +442,29 @@ defmodule NodeTown do
           stop: prompt.suffix
         )
 
-      {id, state} = say(response, chat_id, token, state)
+      {response, id, description, state} =
+        case Regex.run(~r"<action:show \"(.*?)\">", response) do
+          [_, imgprompt] ->
+            {id, description} = show_picture(imgprompt, chat_id, token)
 
-      response_entity =
-        find_message_by_id(id)
-        |> AI.chatContext(synopsis)
-        |> NodeTown.Graph.remember()
+            {"<img alt=\"{imgprompt}\">", id, description, state}
+
+          nil ->
+            {id, state} = say(response, chat_id, token, state)
+
+            description =
+              find_message_by_id(id)
+              |> AI.chatContext(synopsis)
+              |> NodeTown.Graph.remember()
+
+            {response, id, description, state}
+        end
 
       prompt2 = Prompts.Text.update(synopsis, text, response)
 
       new_synopsis =
         GPT3.complete!(
-          context: RDF.Description.subject(response_entity),
+          context: RDF.Description.subject(description),
           model: "text-davinci-003",
           max_tokens: Prompts.estimate_tokens(prompt2) + 512,
           temperature: 0,
@@ -448,6 +480,37 @@ defmodule NodeTown do
 
     def handle_reply(_continuation, _subject, _text, _id, _token, state) do
       {:ok, state}
+    end
+
+    def show_picture(prompt, chat_id, token) do
+      spinner("upload_photo", chat_id, token)
+      imgsrc = GPT3.image!(prompt)
+
+      inference =
+        NodeTown.gensym()
+        |> RDF.type(AI.Inference)
+        |> ActivityStreams.published(DateTime.now!("Etc/UTC"))
+        |> AI.input(prompt)
+        |> ActivityStreams.image(imgsrc)
+        |> NodeTown.remember()
+
+      {:ok, %{"message_id" => id} = message} =
+        Telegram.Api.request(
+          token,
+          "sendPhoto",
+          chat_id: chat_id,
+          photo: imgsrc,
+          caption: prompt
+        )
+
+      description =
+        describe_new_message(token, message)
+        |> ActivityStreams.author(AI.NodeTown)
+        |> ActivityStreams.image(imgsrc)
+        |> ActivityStreams.generator(inference |> RDF.Description.subject())
+        |> NodeTown.Graph.remember()
+
+      {id, description}
     end
   end
 
