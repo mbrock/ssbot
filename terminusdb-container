@@ -1,0 +1,372 @@
+#!/bin/bash
+
+#
+# CONFIG
+#
+
+# Load ENV file
+
+if [[ $1 != "nop" && -z "$TERMINUSDB_IGNORE_ENV" && -f ENV ]]; then
+  set -o allexport
+  # shellcheck disable=SC1091
+  # shellcheck source=ENV
+  source "$(pwd)/ENV"
+  set +o allexport
+fi
+
+# Container
+TERMINUSDB_QUICKSTART_CONTAINER=${TERMINUSDB_CONTAINER:-terminusdb-server}
+TERMINUSDB_QUICKSTART_REPOSITORY=${TERMINUSDB_REPOSITORY:-terminusdb.docker.scarf.sh/terminusdb/terminusdb-server}
+
+# Version
+TERMINUSDB_QUICKSTART_TAG=${TERMINUSDB_TAG:-latest}
+
+# Volumes
+TERMINUSDB_QUICKSTART_STORAGE=${TERMINUSDB_STORAGE:-terminusdb_storage}
+TERMINUSDB_QUICKSTART_STORAGE_VOLUME=/app/terminusdb/storage
+
+# Server
+TERMINUSDB_QUICKSTART_PORT=${TERMINUSDB_PORT:-6363}
+TERMINUSDB_QUICKSTART_PASS=${TERMINUSDB_PASS:-root}
+TERMINUSDB_QUICKSTART_AUTOLOGIN=${TERMINUSDB_AUTOLOGIN_ENABLED:-true}
+TERMINUSDB_QUICKSTART_JWT_ENABLED=${TERMINUSDB_JWT_ENABLED:-false}
+TERMINUSDB_QUICKSTART_JWT_AGENT_NAME_PROPERTY=${TERMINUSDB_JWT_AGENT_NAME_PROPERTY:-''}
+TERMINUSDB_QUICKSTART_JWKS=${TERMINUSDB_JWKS_ENDPOINT:-''}
+TERMINUSDB_QUICKSTART_INSECURE_USER_HEADER_ENABLED=${TERMINUSDB_INSECURE_USER_HEADER_ENABLED:-false}
+
+# HTTP
+TERMINUSDB_QUICKSTART_SCHEME="http"
+
+if [[ $TERMINUSDB_QUICKSTART_AUTOLOGIN == false ]]; then
+  TERMINUSDB_QUICKSTART_SERVER_IP=${TERMINUSDB_SERVER_IP:-0.0.0.0}
+else
+  TERMINUSDB_QUICKSTART_SERVER_IP="127.0.0.1"
+fi
+
+TERMINUSDB_URL="$TERMINUSDB_QUICKSTART_SCHEME://127.0.0.1:$TERMINUSDB_QUICKSTART_PORT/"
+
+if [[ "$(id -u)" == "0" || "$(uname)" == "Darwin" || "$TERM_PROGRAM" == "Apple_Terminal" ]]; then
+  TERMINUSDB_QUICKSTART_DOCKER_DEFAULT="docker"
+elif command -v sudo >/dev/null; then
+  TERMINUSDB_QUICKSTART_DOCKER_DEFAULT="sudo docker"
+else
+  TERMINUSDB_QUICKSTART_DOCKER_DEFAULT="docker"
+fi
+
+TERMINUSDB_QUICKSTART_DOCKER=${TERMINUSDB_DOCKER:-$TERMINUSDB_QUICKSTART_DOCKER_DEFAULT}
+
+function remove_old_volumes {
+  read -p "Are you sure? [y/N] " -r -n 1
+  printf "\n"    # (optional) move to a new line
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+      if ! $TERMINUSDB_QUICKSTART_DOCKER volume rm terminus_config $TERMINUSDB_QUICKSTART_STORAGE_VOLUME; then
+          printf "Could not remove volumes. Are you running an existing container of TerminusDB? Stop it first.\n"
+      fi
+  else
+      exit 2
+  fi
+}
+
+function version_check {
+  # The old TerminusDB had a prefix.db file needed, the new one
+  # does not as prefixes are handled in a different way. Therefore
+  # it is safe to assume that an existing storage volume with the
+  # prefix.db is a user running an old version of TerminusDB
+  if ! $TERMINUSDB_QUICKSTART_DOCKER volume inspect "$TERMINUSDB_QUICKSTART_STORAGE" > /dev/null 2>&1; then
+      # no volume? then it will be created later on and further checks are unnecessary
+      return 0
+  fi
+
+  if $TERMINUSDB_QUICKSTART_DOCKER run --rm -v "$TERMINUSDB_QUICKSTART_STORAGE_VOLUME":/home/ alpine cat /home/prefix.db > /dev/null 2>&1; then
+      printf "\
+You are running an old version of terminusdb-server. The new %s version
+uses a very different data structure which breaks backwards compatibility.
+Continuing will remove your existing databases.\n" "$TERMINUSDB_QUICKSTART_TAG"
+      remove_old_volumes
+  fi
+
+  # Any other case will be handled by comparing storage version
+  retrieve_storage_version
+  STORAGE_VERSION=$?
+  retrieve_expected_storage_version
+  EXPECTED_STORAGE_VERSION=$?
+
+  if [ $STORAGE_VERSION -gt $EXPECTED_STORAGE_VERSION ];then
+     echo "Your TerminusDB store is not supported by this version of TerminusDB. Please upgrade TerminusDB."
+     exit 1
+  elif [ $STORAGE_VERSION -lt $EXPECTED_STORAGE_VERSION ];then
+     echo "Your store is outdated and needs to be upgraded. Run \`terminusdb-container upgrade\` to do so."
+     exit 1
+  fi
+}
+
+if [[ -z "$TERMINUSDB_LABEL_FILE" ]]; then
+  TERMINUSDB_QUICKSTART_SET_LABEL_FILE=""
+ else
+  TERMINUSDB_QUICKSTART_SET_LABEL_FILE="--label-file \"$TERMINUSDB_LABEL_FILE\""
+fi
+
+if [[ -z "$TERMINUSDB_NETWORK" ]]; then
+  TERMINUSDB_QUICKSTART_SET_NETWORK=""
+ else
+  TERMINUSDB_QUICKSTART_SET_NETWORK="--network \"$TERMINUSDB_NETWORK\""
+fi
+
+if [[ -z "$TERMINUSDB_LOCAL" ]]; then
+  TERMINUSDB_QUICKSTART_MOUNT_LOCAL=""
+ else
+  TERMINUSDB_QUICKSTART_MOUNT_LOCAL="-v \"$TERMINUSDB_LOCAL\":/app/local_files"
+fi
+
+if [[ -z "$TERMINUSDB_DASHBOARD_LOCAL_PATH" ]]; then
+  TERMINUSDB_QUICKSTART_DASHBOARD_COMMAND=""
+ else
+  TERMINUSDB_QUICKSTART_DASHBOARD_COMMAND="-v \"$TERMINUSDB_DASHBOARD_LOCAL_PATH\":/app/terminusdb/dashboard"
+fi
+
+#
+# FUNCTIONS
+#
+
+_check_if_docker_is_in_path () {
+  if ! $TERMINUSDB_QUICKSTART_DOCKER --version > /dev/null; then
+    printf "Error! We searched for a way to run '%s', but, sadly, we couldn't find it.\n" \
+      "$TERMINUSDB_QUICKSTART_DOCKER"
+    exit 1
+  fi
+}
+
+# Run platform check
+_platform_check () {
+  PLATFORM_ARCHITECTURE=$(uname -m)
+  if [[ $PLATFORM_ARCHITECTURE != "x86_64" ]] && [[ $PLATFORM_ARCHITECTURE != "arm64" ]]; then
+      printf "\
+There are no Docker images for other CPU architectures than x86_64 and arm64 yet.
+You can try to manually compile the components of TerminusDB by following the
+instructions on the terminusdb-server repository although other architectures are not
+officially supported yet.
+https://github.com/terminusdb/terminusdb-server/blob/master/docs/BUILD.md \n"
+      exit 4
+  fi
+}
+
+_usage () {
+  printf "\
+USAGE:
+  terminusdb-container [COMMAND]
+
+  help        show usage
+  run         run container
+  cli         use the terminusdb cli
+  stop        stop container
+  attach      attach to prolog shell
+  exec        execeute a command inside the container
+  upgrade     attempt to upgrade the storage to the latest version of terminusdb
+  rm          remove volumes\n"
+}
+
+_confirm() {
+  read -r -p "Are you sure? [y/N] " RESPONSE
+  case "$RESPONSE" in
+      [yY][eE][sS]|[yY]) 
+          return 0
+      ;;
+      *)
+          return 1
+      ;;
+  esac
+}
+
+retrieve_storage_version () {
+    # shellcheck disable=SC2046
+    return $(eval "$TERMINUSDB_QUICKSTART_DOCKER" run --rm \
+      "-v \"$TERMINUSDB_QUICKSTART_STORAGE:/storage:rw\"" \
+      "$TERMINUSDB_QUICKSTART_REPOSITORY:$TERMINUSDB_QUICKSTART_TAG" \
+    cat /storage/db/STORAGE_VERSION)
+}
+
+retrieve_terminusdb_major_version() {
+    # shellcheck disable=SC2046
+    return $(eval "$TERMINUSDB_QUICKSTART_DOCKER" run --rm \
+      "-v \"$TERMINUSDB_QUICKSTART_STORAGE:/storage:rw\"" \
+      "$TERMINUSDB_QUICKSTART_REPOSITORY:$TERMINUSDB_QUICKSTART_TAG" \
+      ./terminusdb --version|grep 'TerminusDB v'|perl -pe 's|TerminusDB v([0-9]+).*|\1|')
+}
+
+retrieve_expected_storage_version() {
+    retrieve_terminusdb_major_version
+    MAJOR_VERSION=$?
+    case $MAJOR_VERSION in
+        10)
+            return 1
+            ;;
+        11)
+            return 2
+            ;;
+        *)
+            echo "TerminusDB version $MAJOR_VERSION is not supported by bootstrap"
+            exit 1
+            ;;
+    esac
+}
+
+upgrade_image() {
+  if [[ $TERMINUSDB_QUICKSTART_TAG == "latest" || $TERMINUSDB_QUICKSTART_TAG == "dev" ]]; then
+    $TERMINUSDB_QUICKSTART_DOCKER image rm "$TERMINUSDB_QUICKSTART_REPOSITORY:$TERMINUSDB_QUICKSTART_TAG" 2>/dev/null
+  fi
+}
+
+_run () {
+  if [[ -z "$TERMINUSDB_QUICKSTART_JWKS" ]]; then
+      TERMINUSDB_QUICKSTART_JWKS_ENV=""
+  else
+      TERMINUSDB_QUICKSTART_JWKS_ENV="-e TERMINUSDB_SERVER_JWKS_ENDPOINT=\"$TERMINUSDB_QUICKSTART_JWKS\""
+  fi
+  eval "$TERMINUSDB_QUICKSTART_DOCKER" run -d -it --rm \
+    "--name \"$TERMINUSDB_QUICKSTART_CONTAINER\" -p \"$TERMINUSDB_QUICKSTART_SERVER_IP:$TERMINUSDB_QUICKSTART_PORT:6363\"" \
+    "-v \"$TERMINUSDB_QUICKSTART_STORAGE:$TERMINUSDB_QUICKSTART_STORAGE_VOLUME:rw\"" \
+    "$TERMINUSDB_QUICKSTART_DASHBOARD_COMMAND" \
+    "$TERMINUSDB_QUICKSTART_MOUNT_LOCAL" \
+    "$TERMINUSDB_QUICKSTART_SET_LABEL_FILE" \
+    "$TERMINUSDB_QUICKSTART_SET_NETWORK" \
+    "-e TERMINUSDB_SERVER_PORT=6363" \
+    "$TERMINUSDB_QUICKSTART_JWKS_ENV" \
+    "-e TERMINUSDB_INSECURE_USER_HEADER_ENABLED=\"$TERMINUSDB_QUICKSTART_INSECURE_USER_HEADER_ENABLED\"" \
+    "-e TERMINUSDB_LOG_FORMAT=\"$TERMINUSDB_LOG_FORMAT\"" \
+    "-e TERMINUSDB_LOG_LEVEL=\"$TERMINUSDB_LOG_LEVEL\"" \
+    "-e TERMINUSDB_INSECURE_USER_HEADER=\"$TERMINUSDB_INSECURE_USER_HEADER\"" \
+    "-e TERMINUSDB_ADMIN_PASS=\"$TERMINUSDB_QUICKSTART_PASS\"" \
+    "-e TERMINUSDB_AUTOLOGIN_ENABLED=\"$TERMINUSDB_QUICKSTART_AUTOLOGIN\"" \
+    "-e TERMINUSDB_JWT_ENABLED=\"$TERMINUSDB_QUICKSTART_JWT_ENABLED\"" \
+    "-e TERMINUSDB_JWT_AGENT_NAME_PROPERTY=\"$TERMINUSDB_QUICKSTART_JWT_AGENT_NAME_PROPERTY\"" \
+    "$TERMINUSDB_QUICKSTART_REPOSITORY:$TERMINUSDB_QUICKSTART_TAG"
+}
+
+_cli () {
+    EXTRA_OPTIONS=""
+    if echo "$TERMINUSDB_RUN_CMD" | grep -q '^\(fetch\|clone\|push\|pull\|user\)'
+    then
+        EXTRA_OPTIONS="-t"
+    fi
+    eval "$TERMINUSDB_QUICKSTART_DOCKER"  -i "$EXTRA_OPTIONS" \
+      "$TERMINUSDB_QUICKSTART_CONTAINER" \
+      "./terminusdb" \
+      "$TERMINUSDB_RUN_CMD"
+}
+
+_stop () {
+  $TERMINUSDB_QUICKSTART_DOCKER stop "$TERMINUSDB_QUICKSTART_CONTAINER"
+}
+
+_restart () {
+  $TERMINUSDB_QUICKSTART_DOCKER stop "$TERMINUSDB_QUICKSTART_CONTAINER"
+}
+
+_attach () {
+  $TERMINUSDB_QUICKSTART_DOCKER attach "$TERMINUSDB_QUICKSTART_CONTAINER"
+}
+
+_exec () {
+  if [[ -n "$TERMINUSDB_RUN_CMD" ]]; then
+    eval "$TERMINUSDB_QUICKSTART_DOCKER" exec -it \
+      "$TERMINUSDB_QUICKSTART_CONTAINER" \
+      "$TERMINUSDB_RUN_CMD"
+  fi
+}
+
+_rm () {
+ if _confirm; then
+   $TERMINUSDB_QUICKSTART_DOCKER volume rm "$TERMINUSDB_QUICKSTART_STORAGE"
+ fi
+}
+
+_serve () {
+if command -v python >/dev/null; then
+  python -m http.server 8888
+else
+  printf "\npython is required for this feature\n"
+fi
+}
+
+_upgrade() {
+    docker run \
+           -e TERMINUSDB_QUICKSTART_STORAGE="$TERMINUSDB_QUICKSTART_STORAGE_VOLUME" \
+           -v "$TERMINUSDB_QUICKSTART_STORAGE:$TERMINUSDB_QUICKSTART_STORAGE_VOLUME:rw" \
+           terminusdb/terminusdb-upgrade
+}
+
+_platform_check
+#
+# PROCESS ARGS
+#
+
+if [[ -n "$1" ]]; then
+  case "$1" in
+    "help")
+      _usage
+    ;;
+    "run")
+      # _build
+      _check_if_docker_is_in_path
+      upgrade_image
+      version_check
+      _run > /dev/null \
+        && printf "terminusdb-server container started %s\n" "$TERMINUSDB_URL" \
+        || printf "\nIs the container already running?\n"
+    ;;
+    "cli")
+       _check_if_docker_is_in_path
+      if [[ -n "$2" ]]; then
+        # shellcheck disable=SC2124
+        TERMINUSDB_RUN_CMD="${@:2}"
+      fi
+        _cli || printf "\nError on executing the CLI command, did you forget to run the container first with the run command?"
+    ;;
+    "stop")
+      _check_if_docker_is_in_path
+      _stop > /dev/null \
+        && printf "terminusdb-server container stopped\n" \
+        || printf "\nIs the container running?\n"
+    ;;
+    "attach")
+      _check_if_docker_is_in_path
+      printf "Ctrl+p Ctrl+q to detach\n\n"
+      _attach
+    ;;
+    "rm")
+      _check_if_docker_is_in_path
+      printf "This will delete storage volume\n"
+      _rm \
+        || printf "\nIs the container stopped?\n"
+    ;;
+    "exec")
+      _check_if_docker_is_in_path
+      if [[ -n "$2" ]]; then
+        # shellcheck disable=SC2124
+        TERMINUSDB_RUN_CMD="${@:2}"
+      fi
+      printf "This will exec a command on terminusdb-server\n"
+      _exec \
+          || printf "\nIs the container stopped?\n"
+    ;;
+    "upgrade")
+      _upgrade
+    ;;
+    "nop")
+      true
+    ;;
+    "serve")
+      _check_if_docker_is_in_path
+      _serve
+    ;;
+    *)
+      printf "Error! Command unknown: %s\n\n" "$1"
+      _usage
+      exit 1
+    ;;
+  esac
+else
+  _usage
+fi
+
+# vim:ft=sh
