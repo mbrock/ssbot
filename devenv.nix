@@ -116,6 +116,9 @@ in {
 
     export TERMINUSDB_DOCKER=docker
     export TERMINUSDB_PASS=nodetown
+#    export TERMINUSDB_CONTAINER=terminusdb
+    export TERMINUSDB_SERVER_IP=0.0.0.0
+    export TERMINUSDB_AUTOLOGIN_ENABLED=false
 
     jq < ${devcontainer-config} \
        > ${config.env.DEVENV_ROOT}/.devcontainer.json

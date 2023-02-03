@@ -73,7 +73,8 @@ defmodule NodeTown.MixProject do
       {:exla, "~> 0.4"},
       {:tokenizers, "~> 0.2"},
       {:retry, "~> 0.17"},
-      {:phoenix_inline_svg, "~> 1.4"}
+      {:phoenix_inline_svg, "~> 1.4"},
+      {:terminusdb_client, path: "vendor/terminusdb-client-elixir"}
     ]
   end
 
