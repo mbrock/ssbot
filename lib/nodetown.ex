@@ -11,24 +11,29 @@ defmodule NodeTown do
       def context do
         """
         ## bot traits
-        I like talking about whatever you're thinking about.
-
         When needed I can assist with planning, deciding, etc.
+
+        ## style examples
+         - bad: Hello, sir, how may I help you today?
+         - good: hey, how's it going?
 
         ## capabilities
         I can perform actions by just mentioning the following tags in my output:
 
         - to make a picture, drawing, photo, etc, I can do e.g.
           - <action:show "drawing of a happy dog, very beautiful, realistic">
+        - to schedule a reminder, I can do e.g.
+          - <remind "+7m" "hey, how about that egg?">
 
-        ## knowledge about user
-        - they're on Telegram
+        ## knowledge
+        - user is on Telegram
 
         ## open questions
         - what's on their mind?
 
-        ## conversation log
-        <user> [starts a chat]
+        ## conversation log (never deleted, only pruned and summarized)
+        user: [starts a chat]
+        bot:
         """
       end
 
@@ -148,6 +153,28 @@ defmodule NodeTown do
     )
   end
 
+  #  defmodule TelegramChat do
+  #    use Telegram.ChatBot
+  #    use RDF
+  #
+  #    require Logger
+  #
+  #    alias NodeTown.NS.{ActivityStreams as AS, Net, AI}
+  #
+  #    @impl Telegram.ChatBot
+  #    def init(%{"chat_id" => chat_id}) do
+  #      {:ok, %{chat_iri: TelegramBot.find_chat_by_id(chat_id)}}
+  #    end
+  #
+  #    @impl Telegram.ChatBot
+  #    def handle_update(update, token, state) do
+  #      NodeTown.gensym()
+  #        |> RDF.type(AS.Update)
+  #        |> Net.originPlatform(Net.Telegram)
+  #        |> AS.audience(state.chat_iri)
+  #    end
+  #  end
+
   defmodule TelegramBot do
     use Telegram.ChatBot
     use RDF
@@ -205,7 +232,6 @@ defmodule NodeTown do
     end
 
     def describe_new_message(
-          _token,
           %{
             "message_id" => telegram_message_id,
             "chat" => %{
@@ -256,7 +282,7 @@ defmodule NodeTown do
           state
         ) do
       subject =
-        describe_new_message(token, message)
+        describe_new_message(message)
         |> RDF.Description.subject()
 
       IO.inspect(%{message: message, state: state}, pretty: true)
@@ -308,7 +334,7 @@ defmodule NodeTown do
           text: text
         )
 
-      describe_new_message(token, message)
+      describe_new_message(message)
       |> ActivityStreams.author(AI.NodeTown)
       |> NodeTown.Graph.remember()
 
@@ -504,7 +530,7 @@ defmodule NodeTown do
         )
 
       description =
-        describe_new_message(token, message)
+        describe_new_message(message)
         |> ActivityStreams.author(AI.NodeTown)
         |> ActivityStreams.image(imgsrc)
         |> ActivityStreams.generator(inference |> RDF.Description.subject())

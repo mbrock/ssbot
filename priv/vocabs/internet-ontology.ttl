@@ -107,3 +107,7 @@ net:telegramId a owl:ObjectProperty ;
 net:telegramData a owl:ObjectProperty ;
   rdfs:domain as:Object ;
   rdfs:range xsd:string .
+
+net:jsonPayload a owl:ObjectProperty ;
+  rdfs:domain as:Update ;
+  rdfs:range xsd:string .

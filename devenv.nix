@@ -27,7 +27,7 @@ in {
     datasette
     litestream
     pandoc
-    
+
     llvmPackages_11.openmp
     blas
     faiss
@@ -113,6 +113,9 @@ in {
     
     # This was necessary to install ExFaiss.
     export CPLUS_INCLUDE_PATH="$C_INCLUDE_PATH"
+
+    export TERMINUSDB_DOCKER=docker
+    export TERMINUSDB_PASS=nodetown
 
     jq < ${devcontainer-config} \
        > ${config.env.DEVENV_ROOT}/.devcontainer.json
