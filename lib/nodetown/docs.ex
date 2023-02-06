@@ -51,16 +51,28 @@ defmodule NodeTown.Docs do
     |> Enum.reduce(mod_doc, &CodeNS.child/2)
   end
 
-  def function_rdf(mod, {{:function, name, arity}, _, _, %{"en" => doc}}) do
+  def function_rdf(mod, {{:function, name, arity}, _, _, info}) do
     function_iri = RDF.IRI.new("https://node.town/docs/elixir/#{mod}/#{name}/#{arity}")
 
     function_doc =
       function_iri
       |> RDF.type(CodeNS.Function)
       |> RDFS.label("#{mod}.#{name}/#{arity}")
-      |> RDFS.comment(doc)
       |> CodeNS.parent(mod)
+      |> add_function_info(arity, info)
 
     function_doc
+  end
+
+  def add_function_info(doc, arity, info) do
+    description =
+      case info do
+        %{"en" => s} -> s
+        %{"deprecated" => s} -> "Deprecated: #{s}"
+      end
+
+    doc
+    |> CodeNS.arity(arity)
+    |> CodeNS.documentation(description)
   end
 end

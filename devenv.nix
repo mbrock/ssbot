@@ -95,6 +95,16 @@ in {
         -S mix phx.server
     '';
 
+    nodetown-remote.exec = ''
+      iex --name nodetown@$(hostname) --cookie nodetown \
+        --remsh nodetown@$(hostname)
+    '';
+
+    nodetown-eval.exec = ''
+      iex --name nodetown@$(hostname) --cookie nodetown \
+        --remsh nodetown@$(hostname) --eval "$@"
+    '';
+
     nodetown-setup.exec = ''
       mix do local.rebar --force, local.hex --force
       mix escript.install hex livebook
