@@ -8,6 +8,7 @@
 @prefix as: <http://www.w3.org/ns/activitystreams#> .
 
 @prefix net: <https://node.town/net/> .
+@prefix code: <https://node.town/code/> .
 @prefix ai: <https://node.town/ai/> .
 
 <https://node.town/net/> a owl:Ontology ;
@@ -102,14 +103,34 @@ net:Telegram a as:Service ;
   as:name "Telegram"@en ;
   as:url "https://telegram.org" .
 
-net:telegramId a owl:ObjectProperty ;
+net:telegramId a owl:DatatypeProperty ;
   rdfs:domain as:Object ;
   rdfs:range xsd:integer .
 
-net:telegramData a owl:ObjectProperty ;
+net:telegramData a owl:DatatypeProperty ;
   rdfs:domain as:Object ;
   rdfs:range xsd:string .
 
-net:jsonPayload a owl:ObjectProperty ;
+net:jsonPayload a owl:DatatypeProperty ;
   rdfs:domain as:Update ;
   rdfs:range xsd:string .
+
+code:CodeUnit a as:Object .
+code:Module a code:CodeUnit .
+code:Function a code:CodeUnit .
+
+code:arity a owl:DatatypeProperty ;
+  rdfs:domain code:Function ;
+  rdfs:range xsd:integer .
+
+code:documentation a owl:DatatypeProperty ;
+  rdfs:domain code:CodeUnit ;
+  rdfs:range xsd:string .
+
+code:parent a owl:ObjectProperty ;
+  rdfs:domain code:CodeUnit ;
+  rdfs:range code:CodeUnit .
+
+code:child a owl:ObjectProperty ;
+  rdfs:domain code:CodeUnit ;
+  rdfs:range code:CodeUnit .

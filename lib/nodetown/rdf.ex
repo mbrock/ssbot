@@ -11,6 +11,11 @@ defmodule NodeTown.NS do
     file: "internet-ontology.ttl"
   )
 
+  defvocab(Code,
+    base_iri: "https://node.town/code/",
+    file: "internet-ontology.ttl"
+  )
+
   defvocab(AI,
     base_iri: "https://node.town/ai/",
     file: "internet-ontology.ttl"

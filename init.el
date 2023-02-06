@@ -193,3 +193,19 @@
   (magit-git-command "git save"))
 
 (global-set-key (kbd "C-c S") 'magit-save)
+
+(global-set-key (kbd "C-c .") 'xref-find-definitions)
+
+(progn
+  (load-file "./vendor/copilot-emacs/copilot.el")
+
+  (add-hook 'prog-mode-hook 'copilot-mode)
+
+  (global-set-key (kbd "C-c C-SPC") 'copilot-complete)
+  
+  (with-eval-after-load 'company
+    ;; disable inline previews
+    (delq 'company-preview-if-just-one-frontend company-frontends))
+  
+  (define-key copilot-completion-map (kbd "C-c TAB") 'copilot-accept-completion))
+

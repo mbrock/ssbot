@@ -63,6 +63,9 @@ in {
       whitespace-cleanup-mode
       zenburn-theme
       zig-mode
+
+      # required for copilot.el
+      dash s editorconfig
     ]))
 
     (texlive.combine {
