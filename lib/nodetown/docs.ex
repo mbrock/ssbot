@@ -51,7 +51,7 @@ defmodule NodeTown.Docs do
     |> Enum.reduce(mod_doc, &CodeNS.child/2)
   end
 
-  def function_rdf(mod, {name, arity, _, _, %{"en" => doc}}) do
+  def function_rdf(mod, {{:function, name, arity}, _, _, %{"en" => doc}}) do
     function_iri = RDF.IRI.new("https://node.town/docs/elixir/#{mod}/#{name}/#{arity}")
 
     function_doc =
