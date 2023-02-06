@@ -84,6 +84,8 @@ ai:NodeTown a as:Service ;
   as:name "Node.Town" ;
   as:url "https://node.town" .
 
+ai:Classify a as:Service .
+
 ai:Weather a as:Service .
 
 ai:EInk a as:Service .

@@ -30,6 +30,10 @@ config :nodetown,
   ],
   weather_api_key: System.get_env("PIRATE_WEATHER_API_KEY")
 
+config :nostrum,
+  token: System.get_env("DISCORD_BOT_TOKEN"),
+  gateway_intents: :all
+
 if config_env() == :prod do
   database_path =
     System.get_env("DATABASE_PATH") ||

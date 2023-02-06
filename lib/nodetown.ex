@@ -277,7 +277,7 @@ defmodule NodeTown do
 
     @impl Telegram.ChatBot
     def handle_update(
-          %{"message" => %{"text" => text, "chat" => %{"id" => chat_id}} = message},
+          %{"message" => %{"text" => text, "chat" => %{"id" => chat_id}} = message} = update,
           token,
           state
         ) do

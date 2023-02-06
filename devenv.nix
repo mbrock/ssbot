@@ -35,6 +35,9 @@ in {
     lynx
     links2
 
+    ffmpeg
+    youtube-dl
+
     elixir-version
     (elixir_ls.override { elixir = elixir-version; })
     

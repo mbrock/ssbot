@@ -74,7 +74,12 @@ defmodule NodeTown.MixProject do
       {:tokenizers, "~> 0.2"},
       {:retry, "~> 0.17"},
       {:phoenix_inline_svg, "~> 1.4"},
-      {:terminusdb_client, path: "vendor/terminusdb-client-elixir"}
+      {:terminusdb_client, path: "vendor/terminusdb-client-elixir"},
+      {:nostrum, github: "Kraigie/nostrum"},
+      {:gun, "== 2.0.1", [env: :prod, repo: "hexpm", hex: "remedy_gun", override: true]},
+      {:cowlib, "~> 2.11.1", [env: :prod, hex: "remedy_cowlib", repo: "hexpm", optional: false, override: true]},
+      {:exmoji, "~> 0.3.0"}
+#      {:gun, "== 2.0.1", override: true}
     ]
   end
 
