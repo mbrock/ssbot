@@ -1,8 +1,18 @@
+require Protocol
+
+for x <- [
+      Nostrum.Struct.Event.TypingStart,
+      Nostrum.Struct.Message,
+      Nostrum.Struct.User,
+      Nostrum.Struct.User.Flags
+    ] do
+  Protocol.derive(Jason.Encoder, x)
+end
+
 defmodule NodeTown.Discord do
   require Logger
 
   use Nostrum.Consumer
-  import Bitwise
 
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
@@ -38,8 +48,35 @@ defmodule NodeTown.Discord do
     Exmoji.from_short_name(name) |> Exmoji.EmojiChar.render()
   end
 
+  def handle_event({tag, {x, y}, _ws}) do
+    NodeTown.xadd!(
+      :events,
+      platform: :discord,
+      tag: tag,
+      payload: Jason.encode!([x, y])
+    )
+  end
+
+  def handle_event({tag, {x, y, z}, _ws}) do
+    NodeTown.xadd!(
+      :events,
+      platform: :discord,
+      tag: tag,
+      payload: Jason.encode!([x, y, z])
+    )
+  end
+
+  def handle_event({tag, payload, _ws}) do
+    NodeTown.xadd!(
+      :events,
+      platform: :discord,
+      tag: tag,
+      payload: Jason.encode!(payload)
+    )
+  end
+
   def handle_event({:MESSAGE_CREATE, %{author: %{bot: nil}} = msg, _ws_state} = event) do
-    Logger.debug(inspect(event))
+    Logger.debug(inspect(event, label: "Discord event"))
 
     case msg.content do
       "!ping" ->

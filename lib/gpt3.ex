@@ -105,6 +105,25 @@ defmodule GPT3 do
   end
 
   def embedding!(text) do
+    case RDF.Graph.query(NodeTown.Graph.get(), %{
+           _x: %{
+             :a => AI.Embedding,
+             AI.input() => text,
+             AI.output() => :embedding?
+           }
+         }) do
+      [%{embedding: embedding}] ->
+        embedding
+        |> RDF.Literal.value()
+        |> Jason.decode!()
+        |> Nx.tensor()
+
+      [] ->
+        do_embedding!(text)
+    end
+  end
+
+  def do_embedding!(text) do
     {:ok, %{"data" => [%{"embedding" => embedding}]}} =
       request("/v1/embeddings", %{
         input: text,
@@ -116,6 +135,7 @@ defmodule GPT3 do
     |> ActivityStreams.published(DateTime.now!("Etc/UTC"))
     |> AI.input(text)
     |> AI.output(Jason.encode!(embedding))
+    |> NodeTown.remember()
 
     embedding |> Nx.tensor()
   end

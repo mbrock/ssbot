@@ -1,4 +1,17 @@
 defmodule NodeTown do
+  def xadd!(key, fields) do
+    args =
+      Enum.concat(
+        ["XADD", to_string(key), "*"],
+        fields
+        |> Enum.flat_map(fn {k, v} -> [k, v] end)
+        |> Enum.map(&to_string/1)
+      )
+      |> IO.inspect(label: "redis")
+
+    Redix.command!(:redis, args)
+  end
+
   defmodule Prompts do
     def estimate_tokens(x) do
       x
@@ -277,7 +290,7 @@ defmodule NodeTown do
 
     @impl Telegram.ChatBot
     def handle_update(
-          %{"message" => %{"text" => text, "chat" => %{"id" => chat_id}} = message} = update,
+          %{"message" => %{"text" => text, "chat" => %{"id" => chat_id}} = message} = _update,
           token,
           state
         ) do

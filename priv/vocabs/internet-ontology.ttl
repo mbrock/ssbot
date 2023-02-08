@@ -115,6 +115,12 @@ net:jsonPayload a owl:DatatypeProperty ;
   rdfs:domain as:Update ;
   rdfs:range xsd:string .
 
+net:Readwise a as:Service .
+
+net:highlights a owl:ObjectProperty ;
+  rdfs:domain schema:CreativeWork ;
+  rdfs:range schema:Quotation .
+
 code:CodeUnit a as:Object .
 code:Module a code:CodeUnit .
 code:Function a code:CodeUnit .

@@ -11,39 +11,10 @@ let
       "mkhl.direnv"
     ];
   };
-in {
-  # https://devenv.sh/packages/
-  packages = with pkgs; [
-    devtools.restless-git
-    
-    screen
-    inotify-tools
-    
-    jq
-    ripgrep
-    
-    git
-    sqlite
-    datasette
-    litestream
-    pandoc
 
-    llvmPackages_11.openmp
-    blas
-    faiss
-
-    lynx
-    links2
-
-    ffmpeg
-    youtube-dl
-
-    elixir-version
-    (elixir_ls.override { elixir = elixir-version; })
-    
-    (emacsWithPackages (e: with e; [
+  my-emacs =
+    pkgs.emacsWithPackages (e: with e; [
       company
-      datasette
       default-text-scale
       direnv
       eglot
@@ -64,9 +35,72 @@ in {
       zenburn-theme
       zig-mode
 
+#      prolog-mode
+#      ediprolog
+
+      sweeprolog
+      
       # required for copilot.el
       dash s editorconfig
-    ]))
+    ]);
+  
+  my-swi-prolog =
+    pkgs.swiProlog.overrideAttrs (old:
+      let version = "9.1.4";
+      in {
+        inherit version;
+        src = pkgs.fetchFromGitHub {
+          owner = "SWI-Prolog";
+          repo = "swipl-devel";
+          rev = "V${version}";
+          sha256 = "0qd4y1z6davrsyh6f21ldxcanijjc847qphqb2d65hfwdbdxpzxb";
+          fetchSubmodules = true;
+        };
+
+        nativeBuildInputs = old.nativeBuildInputs ++ [
+          pkgs.ninja
+        ];
+
+        buildInputs = old.buildInputs ++ [pkgs.emacs];
+      }
+    );
+  
+in {
+  # https://devenv.sh/packages/
+  packages = with pkgs; [
+    devtools.restless-git
+    
+    screen
+    inotify-tools
+    
+    jq
+    ripgrep
+    
+    git
+    sqlite
+    datasette
+    litestream
+    pandoc
+    redis
+
+    llvmPackages_11.openmp
+    blas
+    faiss
+
+    lynx
+    links2
+
+    ffmpeg
+    youtube-dl
+
+    scryer-prolog
+
+    my-swi-prolog
+
+    elixir-version
+    (elixir_ls.override { elixir = elixir-version; })
+    
+    my-emacs
 
     (texlive.combine {
       inherit (texlive)
@@ -95,13 +129,18 @@ in {
         -S mix phx.server
     '';
 
+    gensym.exec = ''
+      cat /dev/urandom | tr -dc 'a-z' | fold -w 8 | head -n 1
+    '';
+    
     nodetown-remote.exec = ''
-      iex --name nodetown@$(hostname) --cookie nodetown \
+      set -x
+      iex --sname $(gensym) --cookie nodetown \
         --remsh nodetown@$(hostname)
     '';
 
     nodetown-eval.exec = ''
-      iex --name nodetown@$(hostname) --cookie nodetown \
+      iex --sname $(gensym) --cookie nodetown \
         --remsh nodetown@$(hostname) --eval "$@"
     '';
 
@@ -135,6 +174,8 @@ in {
 #    export TERMINUSDB_CONTAINER=terminusdb
     export TERMINUSDB_SERVER_IP=0.0.0.0
     export TERMINUSDB_AUTOLOGIN_ENABLED=false
+
+    export LD_PRELOAD=${my-swi-prolog}/lib/libswipl.so
 
     jq < ${devcontainer-config} \
        > ${config.env.DEVENV_ROOT}/.devcontainer.json

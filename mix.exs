@@ -81,7 +81,8 @@ defmodule NodeTown.MixProject do
        [env: :prod, hex: "remedy_cowlib", repo: "hexpm", optional: false, override: true]},
       {:exmoji, "~> 0.3.0"},
       {:exile, "~> 0.1.0"},
-      {:fifo, "~> 0.1.0"}
+      {:fifo, "~> 0.1.0"},
+      {:redix, "~> 1.1"}
     ]
   end
 

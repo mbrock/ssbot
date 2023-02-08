@@ -9,6 +9,7 @@ defmodule NodeTown.Application do
   def start(_type, _args) do
     children =
       [
+        {Redix, name: :redis},
         NodeTownWeb.Telemetry,
         NodeTown.Repo,
         {Phoenix.PubSub, name: NodeTown.PubSub},

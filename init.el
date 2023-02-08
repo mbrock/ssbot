@@ -209,3 +209,9 @@
   
   (define-key copilot-completion-map (kbd "C-c TAB") 'copilot-accept-completion))
 
+;; Use C-c C-c to DWIM in ediprolog
+;(define-key prolog-mode-map (kbd "C-c C-c") 'ediprolog-dwim)
+
+(require 'sweeprolog)
+
+(add-to-list 'auto-mode-alist '("\\.pl\\'" . sweeprolog-mode))
