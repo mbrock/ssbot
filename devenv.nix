@@ -78,45 +78,45 @@ in {
     
     git
     sqlite
-    datasette
-    litestream
-    pandoc
-    redis
+#    datasette
+#    litestream
+#    pandoc
+#    redis
 
-    llvmPackages_11.openmp
-    blas
-    faiss
+#    llvmPackages_11.openmp
+#    blas
+#    faiss
 
-    lynx
-    links2
+#    lynx
+#    links2
 
-    ffmpeg
-    youtube-dl
+#    ffmpeg
+#    youtube-dl
 
-    scryer-prolog
+#    scryer-prolog
 
     my-swi-prolog
 
-    elixir-version
-    (elixir_ls.override { elixir = elixir-version; })
+#    elixir-version
+#    (elixir_ls.override { elixir = elixir-version; })
     
     my-emacs
 
-    (texlive.combine {
-      inherit (texlive)
-        scheme-basic
-        ebgaramond
-        etoolbox
-        extsizes
-        parskip
-        geometry
-        crop
-        titlesec
-        xkeyval
-        fontaxes
-        dvipng
-      ;
-    })
+#    (texlive.combine {
+#      inherit (texlive)
+#        scheme-basic
+#        ebgaramond
+#        etoolbox
+#        extsizes
+#        parskip
+#        geometry
+#        crop
+#        titlesec
+#        xkeyval
+#        fontaxes
+#        dvipng
+#      ;
+#    })
   ];
 
   scripts = {
