@@ -1,12 +1,21 @@
 :- module(nt, []).
 
+:- use_module(library(condition)).
+:- use_module(library(persistency)).
 :- use_module(library(redis)).
+:- use_module(library(sgml)).
+:- use_module(library(http/http_open)).
 :- use_module(library(http/http_client)).
 :- use_module(library(http/http_json)).
+:- use_module(library(http/html_write)).
 :- use_module(library(http/websocket)).
-:- use_module(library(condition)).
+:- use_module(library(lynx/html_text)).
 
-:- redis_server(default, localhost:6379, []).
+:- persistent
+    known_secret(name:atom, secret:text),
+    known_event(data:any, time:float).
+
+:- db_attach("secrets.db", []).
 
 secret_env(openai, "OPENAI_API_KEY").
 secret_env(telegram, "TELEGRAM_API_KEY").
@@ -16,9 +25,12 @@ secret_env(spotify_id, "SPOTIFY_ID").
 secret_env(spotify, "SPOTIFY_SECRET").
 secret_env(pirate_weather, "PIRATE_WEATHER_API_KEY").
 
-secret(Env, Secret) :-
-    secret_env(Env, EnvVar),
-    getenv(EnvVar, Secret).
+secret(Name, Secret) :-
+    known_secret(Name, Secret).
+
+secret(Name, Secret) :-
+    secret_env(Name, Env),
+    getenv(Env, Secret).
 
 base_url(openai, "https://api.openai.com/").
 base_url(discord, "https://discord.com/api/v10/").
@@ -62,6 +74,10 @@ api_get(Service, PathComponents, Result) :-
               request_header('User-Agent'=UserAgent),
               json_object(dict)]).
 
+completion(Engine, prompt(P), Options, Completion) :-
+    put_dict(_{prompt: P}, Options, Options2),
+    completion(Engine, Options2, Completion).
+
 completion(Engine, Options, Completion) :-
     api_post(openai, ["v1", "engines", Engine, "completions"], Options, Result),
     member(Completion, Result.choices).
@@ -70,11 +86,9 @@ discord_gateway_url(URL) :-
     api_get(discord, ["gateway"], Result),
     string_concat(Result.url, "?v=10&encoding=json", URL).
 
-:- dynamic event/2.
-
-event(X) :-
+save_event(X) :-
     get_time(Now),
-    assertz(event(X, Now)).
+    assert_known_event(X, Now).
 
 discord_opcode(0, dispatch).
 discord_opcode(1, heartbeat).
@@ -91,7 +105,7 @@ debug(websocket(_)).
 discord_gateway_send(Socket, Message) :-
     debug(websocket(send), "Sending ~p", [Message]),
     ws_send(Socket, json(Message)),
-    event(send(websocket, discord, Message)).
+    save_event(send(websocket, discord, Message)).
 
 discord_gateway_send(Socket, Op, Data) :-
     discord_opcode(Opcode, Op),
@@ -127,7 +141,7 @@ discord_intent_bitmask(Intents, Bitmask) :-
 
 discord_receive(Socket, Message) :-
     ws_receive(Socket, Message, [format(json)]),
-    event(receive(websocket, discord, Message)).
+    save_event(receive(websocket, discord, Message)).
 
 discord_identify(Socket, Intents) :-
     secret(discord, Token),
@@ -142,9 +156,9 @@ discord_identify(Socket, Intents) :-
 
 discord_gateway_close(Socket) :-
     ws_close(Socket, 1000, "Goodbye"),
-    event(close(websocket, discord)).
+    save_event(close(websocket, discord)).
 
-discord_gateway_connect(Intents, Hello, Ready) :-
+discord_gateway_connect(Intents, Hello, Ready, Socket) :-
     discord_gateway_url(URL), !,
     http_open_websocket(URL, Socket, []),
     discord_receive(Socket, Hello), !,
@@ -154,7 +168,13 @@ discord_gateway_connect(Intents, Hello, Ready) :-
     discord_receive(Socket, Ready), !,
     discord_gateway_close(Socket), !.
 
-demo() :-
-    discord_gateway_connect([guild_messages], Hello, Ready),
-    print(hello(Hello)), nl,
-    print(ready(Ready)), nl.
+demo(discord) :-
+    discord_gateway_connect([guild_messages], Hello, Ready, Socket),
+    discord_gateway_close(Socket).
+
+demo(html) :-
+    http_open("https://www.gnu.org/", Stream, []),
+    call_cleanup(
+        load_html(Stream, DOM, []),
+        close(Stream)),
+    html_text(DOM, [width(72)]).
