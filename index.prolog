@@ -4,6 +4,7 @@
 :- use_module(library(http/http_client)).
 :- use_module(library(http/http_json)).
 :- use_module(library(http/websocket)).
+:- use_module(library(condition)).
 
 :- redis_server(default, localhost:6379, []).
 
@@ -69,21 +70,32 @@ discord_gateway_url(URL) :-
     api_get(discord, ["gateway"], Result),
     string_concat(Result.url, "?v=10&encoding=json", URL).
 
+:- dynamic event/2.
+
+event(X) :-
+    get_time(Now),
+    assertz(event(X, Now)).
+
 discord_opcode(0, dispatch).
 discord_opcode(1, heartbeat).
 discord_opcode(7, reconnect).
 discord_opcode(9, invalid_session).
 discord_opcode(10, hello).
 discord_opcode(11, heartbeat_ack).
+discord_opcode(2, identify).
+discord_opcode(_, _) :- throw(error(bad)).
+
+debug(websocket).
+debug(websocket(_)).
 
 discord_gateway_send(Socket, Message) :-
-    ws_send(Socket, json(Message)).
+    debug(websocket(send), "Sending ~p", [Message]),
+    ws_send(Socket, json(Message)),
+    event(send(websocket, discord, Message)).
 
 discord_gateway_send(Socket, Op, Data) :-
     discord_opcode(Opcode, Op),
-    Map = _{op: Opcode, d: Data},
-    print(Map), nl,
-    discord_gateway_send(Socket, Map).
+    discord_gateway_send(Socket, _{op: Opcode, d: Data}).
 
 discord_heartbeat(Socket, Seq) :-
     discord_gateway_send(Socket, heartbeat, Seq).
@@ -114,7 +126,8 @@ discord_intent_bitmask(Intents, Bitmask) :-
     sum_list(Bits, Bitmask).
 
 discord_receive(Socket, Message) :-
-    ws_receive(Socket, json(Message)).
+    ws_receive(Socket, Message, [format(json)]),
+    event(receive(websocket, discord, Message)).
 
 discord_identify(Socket, Intents) :-
     secret(discord, Token),
@@ -127,13 +140,21 @@ discord_identify(Socket, Intents) :-
                           browser: "node.town",
                           device: "node.town" }}).
 
-discord_gateway_connect(Intents, Hello, Ack, Ready) :-
-    discord_gateway_url(URL),
+discord_gateway_close(Socket) :-
+    ws_close(Socket, 1000, "Goodbye"),
+    event(close(websocket, discord)).
+
+discord_gateway_connect(Intents, Hello, Ready) :-
+    discord_gateway_url(URL), !,
     http_open_websocket(URL, Socket, []),
-    discord_receive(Socket, Hello),
-    discord_heartbeat(Socket),
-    discord_receive(Socket, Ack),
-    discord_identify(Socket, Intents),
-    discord_receive(Socket, Ready).
+    discord_receive(Socket, Hello), !,
+    discord_heartbeat(Socket), !,
+    discord_receive(Socket, _Ack), !,
+    discord_identify(Socket, Intents), !,
+    discord_receive(Socket, Ready), !,
+    discord_gateway_close(Socket), !.
 
-
+demo() :-
+    discord_gateway_connect([guild_messages], Hello, Ready),
+    print(hello(Hello)), nl,
+    print(ready(Ready)), nl.
