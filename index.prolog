@@ -12,6 +12,7 @@
 :- use_module(library(lynx/html_text)).
 :- use_module(library(yall)).
 :- use_module(library(prolog_pack)).
+:- use_module(library(debug)).
 
 :- persistent
     known_secret(name:atom, secret:text),
@@ -63,7 +64,8 @@ api_post(Service, PathComponents, Body, Result) :-
     http_post(URL, json(Body), Result,
               [request_header('Authorization'=Auth),
                request_header('User-Agent'=UserAgent),
-               json_object(dict)]).
+               json_object(dict)]),
+    save_event(post(Service, PathComponents, Body)).
 
 api_post(Service, PathComponents, Result) :-
     api_post(Service, PathComponents, _{}, Result).
@@ -89,17 +91,34 @@ completion(Prompt, Engine, Options, Completion) :-
 
 embedding_model("text-embedding-ada-002").
 
+embeddings(Inputs, Vectors) :-
+    Path = ["v1", "embeddings"],
+    embedding_model(Model),
+    api_post(openai, Path, _{input: Inputs, model: Model}, Result),
+    findall(V, (member(X, Result.data), V = X.embedding), Embeddings),
+    debug(embedding, "embeddings(~q)", [Inputs]),
+    maplist(assert_known_embedding, Inputs, Embeddings),
+    Vectors = Embeddings.
+
+:- debug(event).
+
+save_many_embeddings(Inputs) :-
+    ChunkSize = 25,
+    findnsols(
+        ChunkSize, X,
+        (member(X, Inputs), \+ known_embedding(X, _)),
+        Chunk
+    ),
+    embeddings(Chunk, _).
+
 embedding(Input, Vector) :-
     known_embedding(Input, Vector),
     !.
 
 embedding(Input, Vector) :-
-    Path = ["v1", "embeddings"],
-    embedding_model(Model),
-    api_post(openai, Path, _{input: Input, model: Model}, Result),
-    member(X, Result.data),
-    Vector = X.embedding,
-    assert_known_embedding(Input, Vector).
+    embeddings([Input], [Vector]).
+
+:- debug(embedding).
 
 vector_dot(V1, V2, Dot) :-
     maplist({}/[X,Y,Z]>>(Z is X*Y), V1, V2, Products),
@@ -138,7 +157,8 @@ discord_gateway_url(URL) :-
 
 save_event(X) :-
     get_time(Now),
-    assert_known_event(X, Now).
+    assert_known_event(X, Now),
+    debug(event, "~p", [X]).
 
 discord_opcode(0, dispatch).
 discord_opcode(1, heartbeat).
@@ -242,15 +262,20 @@ pack_embedding(Pack, Embedding) :-
 
 save_pack_data :-
     prolog_pack:query_pack_server(search(""), true(Result), []),
-    member(X, Result),
-    pack_line(X, Line),
-    embedding(Line, _),
-    assert_known_pack(X).
+    forall(member(X, Result), assert_known_pack(X)),
+    findall(Line, (member(Pack, Result), pack_line(Pack, Line)), Lines),
+    save_many_embeddings(Lines).
+
+known_pack_line(Line, Pack) :-
+    known_pack(Pack),
+    pack_line(Pack, Line),
+    !.
 
 relevant_pack(Text, Pack, Similarity) :-
     similarity_search(Text, Line, Similarity),
-    known_pack(Pack),
-    pack_line(Pack, Line).
+    known_pack_line(Line, Pack).
+
+:- debug(pack).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -264,3 +289,7 @@ demo(html, URL) :-
         load_html(Stream, DOM, []),
         close(Stream)),
     html_text(DOM, [width(500)]).
+
+main() :-
+    demo(discord),
+    demo(html, "https://www.gnu.org/").
