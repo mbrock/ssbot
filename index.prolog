@@ -273,9 +273,15 @@ known_pack_line(Line, Pack) :-
 
 relevant_pack(Text, Pack, Similarity) :-
     similarity_search(Text, Line, Similarity),
+    Similarity > 0.75,
     known_pack_line(Line, Pack).
 
 :- debug(pack).
+
+install_relevant_pack(Text, Name, Similarity) :-
+    relevant_pack(Text, Pack, Similarity),
+    Pack = pack(Name, _, _, _, _),
+    pack_install(Name, [interactive(false)]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -290,6 +296,3 @@ demo(html, URL) :-
         close(Stream)),
     html_text(DOM, [width(500)]).
 
-main() :-
-    demo(discord),
-    demo(html, "https://www.gnu.org/").
