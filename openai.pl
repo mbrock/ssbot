@@ -3,6 +3,7 @@
           , completion/4
           , embeddings/2
           , embedding/2
+          , known_embedding/2
           , save_many_embeddings/1
           , vector_similarity/3
           , similarity/3
