@@ -52,3 +52,4 @@ npm-debug.log
 /*.crt
 /*.key
 
+*~
