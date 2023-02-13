@@ -1,4 +1,6 @@
-:- module(nt_discord, []).
+:- module(nt_discord,
+          [ start/2
+          ]).
 
 :- use_module(secrets).
 :- use_module(base).
