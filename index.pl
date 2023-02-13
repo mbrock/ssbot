@@ -1,18 +1,18 @@
 :- module(nt, []).
 
-:- use_module(library(condition)).
+:- use_module(library(time)).
+:- use_module(library(thread)).
 :- use_module(library(persistency)).
-:- use_module(library(redis)).
 :- use_module(library(sgml)).
 :- use_module(library(http/http_open)).
-:- use_module(library(http/http_client)).
 :- use_module(library(http/http_json)).
-:- use_module(library(http/html_write)).
+:- use_module(library(http/http_client)).
 :- use_module(library(http/websocket)).
 :- use_module(library(lynx/html_text)).
 :- use_module(library(yall)).
 :- use_module(library(prolog_pack)).
 :- use_module(library(debug)).
+:- use_module(library(uri)).
 
 :- persistent
     known_secret(name:atom, secret:text),
@@ -30,6 +30,8 @@ secret_env(spotify_id, "SPOTIFY_ID").
 secret_env(spotify, "SPOTIFY_SECRET").
 secret_env(pirate_weather, "PIRATE_WEATHER_API_KEY").
 
+secret(urbion, "n/a").
+
 secret(Name, Secret) :-
     known_secret(Name, Secret).
 
@@ -37,21 +39,23 @@ secret(Name, Secret) :-
     secret_env(Name, Env),
     getenv(Env, Secret).
 
+bearer_prefix(discord, "Bot").
+bearer_prefix(readwise, "Token").
+bearer_prefix(_, "Bearer").
+
 base_url(openai, "https://api.openai.com/").
 base_url(discord, "https://discord.com/api/v10/").
+base_url(urbion, "http://urbion/epap/").
+base_url(readwise, "https://readwise.io/api/v2/").
 
 api_url(Service, Path, URL) :-
     base_url(Service, Base),
     string_concat(Base, Path, URL).
 
 api_auth(Service, Auth) :-
-    Service = discord,
     secret(Service, Token),
-    string_concat("Bot ", Token, Auth).
-
-api_auth(Service, Auth) :-
-    secret(Service, Token),
-    string_concat("Bearer ", Token, Auth).
+    bearer_prefix(Service, Prefix), !,
+    atomic_list_concat([Prefix, Token], ' ', Auth).
 
 user_agent(discord, "DiscordBot (https://node.town, 0.5)").
 user_agent(_, "node.town").
@@ -61,24 +65,29 @@ api_post(Service, PathComponents, Body, Result) :-
     api_auth(Service, Auth),
     api_url(Service, Path, URL),
     user_agent(Service, UserAgent),
-    http_post(URL, json(Body), Result,
+    http_post(URL, Body, Result,
               [request_header('Authorization'=Auth),
                request_header('User-Agent'=UserAgent),
                json_object(dict)]),
     save_event(post(Service, PathComponents, Body)).
 
 api_post(Service, PathComponents, Result) :-
-    api_post(Service, PathComponents, _{}, Result).
+    api_post(Service, PathComponents, json(_{}), Result).
 
-api_get(Service, PathComponents, Result) :-
-    atomics_to_string(PathComponents, "/", Path),
-    api_auth(Service, Auth),
-    api_url(Service, Path, URL),
+api_get(Service, PathComponents, QueryParams, Result) :-
     user_agent(Service, UserAgent),
+    api_auth(Service, Auth),
+    uri_query_components(Query, QueryParams),
+    atomics_to_string(PathComponents, "/", Path),
+    atomics_to_string([Path, Query], "?", PathWithQuery),
+    api_url(Service, PathWithQuery, URL),
+    debug(http(readwise), "GET ~w", [URL]),
     http_get(URL, Result,
              [request_header('Authorization'=Auth),
               request_header('User-Agent'=UserAgent),
               json_object(dict)]).
+
+:- debug(http(readwise)).
 
 completion(P, Options, Completion) :-
     completion(P, "text-davinci-003", Options, Completion).
@@ -86,20 +95,21 @@ completion(P, Options, Completion) :-
 completion(Prompt, Engine, Options, Completion) :-
     Path = ["v1", "engines", Engine, "completions"],
     put_dict(_{prompt: Prompt}, Options, Options2),
-    api_post(openai, Path, Options2, Result),
+    api_post(openai, Path, json(Options2), Result),
     member(Completion, Result.choices).
 
 embedding_model("text-embedding-ada-002").
 
 embeddings(Inputs, Vectors) :-
-    Path = ["v1", "embeddings"],
+    debug(embeddings, "Embedding...", []),
     embedding_model(Model),
-    api_post(openai, Path, _{input: Inputs, model: Model}, Result),
-    findall(V, (member(X, Result.data), V = X.embedding), Embeddings),
+    Body = json(_{input: Inputs, model: Model}),
+    api_post(openai, ["v1", "embeddings"], Body, Result),
+    findall(V, (member(X, Result.data), V = X.embedding), Vectors),
     debug(embedding, "embeddings(~q)", [Inputs]),
-    maplist(assert_known_embedding, Inputs, Embeddings),
-    Vectors = Embeddings.
+    maplist(assert_known_embedding, Inputs, Vectors).
 
+:- debug(embeddings).
 :- debug(event).
 
 save_many_embeddings(Inputs) :-
@@ -138,8 +148,6 @@ known_similarity(I1, I2, Similarity) :-
     known_embedding(I2, V2),
     vector_similarity(V1, V2, Similarity).
 
-:- use_module(library(pairs)).
-
 similarity_search(I1, I2, Similarity) :-
     findall(S-I2, known_similarity(I1, I2, S), Result),
     keysort(Result, Sorted),
@@ -151,8 +159,12 @@ ask(Question, Answer) :-
     once(completion(Question, Options, Completion)),
     Answer = Completion.text.
 
+ask(Question) :-
+    ask(Question, Answer),
+    format("~s~n", [Answer]).
+
 discord_gateway_url(URL) :-
-    api_get(discord, ["gateway"], Result),
+    api_get(discord, ["gateway"], [], Result),
     string_concat(Result.url, "?v=10&encoding=json", URL).
 
 save_event(X) :-
@@ -181,11 +193,20 @@ discord_gateway_send(Socket, Op, Data) :-
     discord_opcode(Opcode, Op),
     discord_gateway_send(Socket, _{op: Opcode, d: Data}).
 
-discord_heartbeat(Socket, Seq) :-
-    discord_gateway_send(Socket, heartbeat, Seq).
+:- dynamic discord_sequence/1.
+
+discord_sequence(null).
 
 discord_heartbeat(Socket) :-
-    discord_heartbeat(Socket, null).
+    discord_sequence(Seq),
+    discord_gateway_send(Socket, heartbeat, Seq).
+
+discord_heartbeat_loop(Socket, Interval) :-
+    debug(websocket(heartbeat), "waiting ~p seconds", [Interval]),
+    sleep(Interval),
+    debug(websocket(heartbeat), "sending heartbeat", []),
+    discord_heartbeat(Socket),
+    discord_heartbeat_loop(Socket, Interval).
 
 discord_intents(1<<0, guilds).
 discord_intents(1<<1, guild_members).
@@ -210,8 +231,15 @@ discord_intent_bitmask(Intents, Bitmask) :-
     sum_list(Bits, Bitmask).
 
 discord_receive(Socket, Message) :-
-    ws_receive(Socket, Message, [format(json)]),
-    save_event(receive(websocket, discord, Message)).
+    ws_receive(Socket, Payload, [format(json)]),
+    Message = Payload.data,
+    save_event(receive(websocket, discord, Message)),
+    discord_opcode(Op, Message.op),
+    (  Op = dispatch
+    -> retractall(discord_sequence(_)),
+       asserta(discord_sequence(Message.s))
+    ;  true
+    ).
 
 discord_identify(Socket, Intents) :-
     secret(discord, Token),
@@ -228,15 +256,27 @@ discord_gateway_close(Socket) :-
     ws_close(Socket, 1000, "Goodbye"),
     save_event(close(websocket, discord)).
 
-discord_gateway_connect(Intents, Hello, Ready, Socket) :-
+discord_gateway_connect(Intents, Ready, Socket) :-
     discord_gateway_url(URL), !,
     http_open_websocket(URL, Socket, []),
     discord_receive(Socket, Hello), !,
+    
+    HeartbeatInterval is Hello.d.heartbeat_interval / 1000,
+    thread_create(
+        discord_heartbeat_loop(Socket, HeartbeatInterval),
+        HeartbeatThread, []),
+
+    thread_at_exit(thread_signal(HeartbeatThread, thread_exit(bye))),
+    
     discord_heartbeat(Socket), !,
     discord_receive(Socket, _Ack), !,
     discord_identify(Socket, Intents), !,
     discord_receive(Socket, Ready), !,
-    discord_gateway_close(Socket), !.
+    discord_loop(Socket).
+
+discord_loop(Socket) :-
+    discord_receive(Socket, _Message),
+    discord_loop(Socket).
 
 %% So, we have a websocket connection to Discord. Now what?
 %%
@@ -246,10 +286,12 @@ discord_gateway_connect(Intents, Hello, Ready, Socket) :-
 %% another thread that reads from the queue and processes
 %% the messages.
 %%
-%% So I'll have to learn about threads and queues in SWI-Prolog.
-%% Let's try to start a thread.
 
-:- use_module(library(thread)).
+start(discord, Intents) :-
+    thread_create(discord_gateway_connect(Intents, _Ready, _Socket),
+                  _,
+                  [alias(discord),
+                   detached(true)]).
 
 %%% Wait, I'm going to do some GPT-3 magic with Prolog package data.
 
@@ -284,10 +326,22 @@ install_relevant_pack(Text, Name, Similarity) :-
     pack_install(Name, [interactive(false)]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% E-ink display stuff
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% The `urbion' computer has an e-ink display.
+% It listens for requests on http://urbion/epap/DISPLAY-LATEX.
+% You send a LaTeX document and it displays it.
+
+eink_show(latex(Latex)) :-
+    api_post(urbion, ["DISPLAY-LATEX"], text(Latex), _).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Demo
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 demo(discord) :-
-    discord_gateway_connect([guild_messages], Hello, Ready, Socket),
-    discord_gateway_close(Socket).
+    start(discord, [guilds, guild_messages, guild_message_reactions]).
 
 demo(html, URL) :-
     http_open(URL, Stream, []),
@@ -296,3 +350,51 @@ demo(html, URL) :-
         close(Stream)),
     html_text(DOM, [width(500)]).
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Readwise
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+save_readwise_event(Item) :-
+    save_event(readwise(Item)).
+
+readwise_export(start, Items, NextCursor) :-
+    api_get(readwise, ["export"], [], Export),
+    NextCursor = cursor(Export.nextPageCursor),
+    Items = Export.results,
+    forall(member(Item, Items), save_readwise_event(Item)).
+
+readwise_export(cursor(Cursor), Items, NextCursor) :-
+    api_get(readwise, ["export"], [pageCursor=Cursor], Export),
+    (  Export.nextPageCursor = null
+    -> NextCursor = end
+    ;  NextCursor = cursor(Export.nextPageCursor)
+    ),
+    Items = Export.results,
+    forall(member(Item, Items), save_readwise_event(Item)).
+
+readwise_export_loop(Cursor, Items) :-
+    readwise_export(Cursor, Items1, NextCursor),
+    (   NextCursor = cursor(_)
+    ->  readwise_export_loop(NextCursor, Items2),
+        append(Items1, Items2, Items)
+    ;   true).
+
+readwise_item(Item) :-
+    readwise_export_loop(start, Items),
+    member(Item, Items).
+
+save_readwise_embeddings :-
+    ChunkSize = 25,
+    findnsols(
+        ChunkSize, Text,
+        ( known_event(readwise(Item), _T),
+          member(Highlight, Item.highlights),
+          Highlight.text = Text,
+          \+ known_embedding(Text, _)),
+        Chunk
+    ),
+    debug(readwise, "Saving ~w embeddings", [ChunkSize]),
+    embeddings(Chunk, _).
+
+:- debug(readwise).

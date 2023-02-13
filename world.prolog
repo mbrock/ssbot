@@ -34,6 +34,11 @@ recipe(omelette) :-
     have(eggs),
     have(butter).
 
+recipe(potato_salad) :-
+    have(potatoes),
+    have(carrots),
+    have(beets).
+
 good(praise(X)) :- love(X).
 good(maintain(X)) :- have(X), machine(X).
 good(eat(X)) :- have(X), food(X).

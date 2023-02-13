@@ -1,86 +1,21 @@
-* node.town
-** ss.com
-*** TODO image stuff
-**** TODO download: Google Cloud bucket
-**** TODO describe: Vision API multi-object queries
-**** TODO decide: GPT-3 to select four images
-**** TODO crop: Vision API crop to square
-**** TODO send: Telegram
+* Coherent Deployment
 
-*** GPT for ads
-**** each ad gets summarized
-**** match against desires?
-***** each group chat has a context
+The Node.Town domain needs a stable referent.
 
-** dumbo
-*** clustering, pubsub
-*** GPT-3 for automation
-**** rules
-***** natural language to formal
-***** suggest ordinary rules
+** Resources, Context, and the Referent
 
-* eink
-** simple way to show a PNG on urbion
- Didn't do that because of some weird issues with sending binaries.
- But I'm sending LaTeX to urbion instead.  It renders to PNG and
- displays.  It would make sense to do the LaTeX rendering on whichever
- computer is fast and can install every single TeX package,
- but whatever.
+What are my dramatic resources, so to speak?
 
-* task management
-  The bot needs to understand that I have "obligations" and
-  "opportunities" and "affordances."
+In terms of skills and technologies, here's a base set:
 
-  To do, could do, might do, should do, wanna do, must do, etc.
+  1. NixOS
+  2. Git
+  3. Prolog
 
-* GenServer explorer
-  Why can't I go into a web page with a live view of all the
-  GenServers in the supervision hierarchy, including browsing
-  their state?
+OK, we can characterize the Node.Town production system as follows.
 
-  Maybe Livebook has something like this.  It doesn't seem like it.
+  1. NixOS is the operating system.
+  2. Git is the version control system.
+  3. Prolog is the programming language.
 
-* error handling in bot
-  Let's say you have a group chat with several threads going on with
-  the bot doing different things... Then those threads should each be
-  separate GenServers.  We need better hierarchical process stuff.
 
-  DynamicSupervisor hierarchies feel really annoying to me, there's so
-  much boilerplate?  I want to define this stuff fluently.
-
-  Hey! Maybe it's time for behavioral threads! Or these
-  actor thingies!
-
-* long term durable threads
-  Event sourcing, right?
-
-  Just save events in SQLite, bro.
-
-  Each group chat becomes an object with a URL.
-
-  Each thread within a group chat becomes an object with a URL.
-
-  You can visit those URLs with a web browser.
-
-  You can subscribe to them with Mastodon.
-
-* crackpot theories
-  The basic fabric of this whole thing is something like a semantic
-  graph that's continuously indexed and enriched using LLMs.
-
-  So I need a decent way to store an RDF database.  I was onto that
-  the other day.
-
-  OK, I'm kinda up to speed on RDF.ex now...
-
-* more crackpot theories
-  It's all about behavioral threads, I have come to realize.
-  How pleasant!
-
-  But that's for another day, I guess.
-
-  This is really interesting.  Harel's "Can Programming Be Liberated,
-  Period?" really points in this direction.
-
-* cross-thread knowledge
-  

@@ -61,7 +61,7 @@ let
           pkgs.ninja
         ];
 
-        buildInputs = old.buildInputs ++ [pkgs.emacs];
+        buildInputs = old.buildInputs ++ [pkgs.emacs pkgs.pcre2];
       }
     );
   
@@ -75,6 +75,9 @@ in {
     
     jq
     ripgrep
+
+    graphviz
+    imagemagick
     
     git
     sqlite
