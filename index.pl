@@ -3,33 +3,17 @@
 :- use_module(secrets).
 :- use_module(base).
 :- use_module(apis).
+:- use_module(discord).
 
-:- use_module(library(time)).
 :- use_module(library(thread)).
-:- use_module(library(persistency)).
 :- use_module(library(sgml)).
 :- use_module(library(http/http_open)).
 :- use_module(library(lynx/html_text)).
 :- use_module(library(yall)).
 :- use_module(library(prolog_pack)).
-:- use_module(library(debug)).
 :- use_module(library(uri)).
 
 :- debug(http(readwise)).
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% E-ink display stuff
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% The `urbion' computer has an e-ink display.
-% It listens for requests on http://urbion/epap/DISPLAY-LATEX.
-% You send a LaTeX document and it displays it.
-
-eink_show(latex(Latex)) :-
-    api_post(urbion, ["DISPLAY-LATEX"], text(Latex), _).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Demo
