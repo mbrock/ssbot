@@ -2,6 +2,8 @@
           [ install_relevant_pack/3
           , save_pack_data/0
           , pack_embedding/2
+          , known_pack/1,
+            relevant_pack/3
           ]).
 
 :- use_module(openai).

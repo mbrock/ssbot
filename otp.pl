@@ -1,28 +1,71 @@
 :- module(otp,
-          [
+          [ nest/2,
+            spin/2,
+            wipe/1,
+            kill/1,
+            lose/0,
+            killall/1
           ]).
 
 :- use_module(library(sweet)).
+:- use_module(library(spawn)).
+:- use_module(library(apply_macros)).
 
-:- use spawn.
-:- use condition.
+:- dynamic spin/3.
 
-% I want to implement "structured concurrency" in Prolog.
-% I want to be able to write code like this:
+:- meta_predicate nest(+, 0).
 
-example :-
-    nest(N, (spin(N, loop(5)),
-             spin(N, loop(3)))).
+nest(Spec, Goal) :-
+    cleanup(wipe(Spec)),
+    call(Goal).
 
-spin(Nest, Goal) :-
-    thread_create(Goal, Task, [at_exit(nest(Nest, exit(Task)))]),
-    thread_send_message(N, spin(),
-    
-nest(Nest, Goal) :-
-    thread_create(Goal, Nest, [at_exit(nest_exit(Nest))]),
+wipe(Spec) :-
+    foreach(join(Spec), true).
+
+kill(Spec) :-
+    forall(spin(Spec, thread, Thread),
+            (debug(spin, "kill ~q", [Thread]),
+             thread_signal(Thread, throw(kill)))),
     !,
-    thread_join(Nest, Status),
-    ( Status = true -> true
-    ; Status = false -> fail
-    ; throw(Status)
-    ).
+    join(Spec).
+
+killall(Spec) :-
+    forall(kill(Spec), true).
+
+lose :-
+    retractall(spin(_, _, _)).
+
+:- meta_predicate spin(+, 0).
+
+spin(Name, Goal) :-
+    term_to_atom(Name, Atom),
+    async(
+        (thread_alias(Atom),
+         thread_self(Thread),
+         assertz(spin(Name, thread, Thread)),
+         Goal),
+        Token),
+    assertz(spin(Name, token, Token)),
+    assertz(spin(Name, goal, Goal)),
+    debug(spin, "open spin ~q", [Name]).
+
+join(Name) :-
+    spin(Name, token, Token),
+    debug(spin, "join spin ~q", [Name]),
+    Token = ephemeral_token(_, Queue),
+    catch(ignore(forall(await(Token), true)),
+          E,
+          debug(spin, "fail spin ~q: ~q", [Name, E])),
+    message_queue_destroy(Queue),
+    retractall(spin(Name, _, _)),
+    debug(spin, "exit spin ~q", [Name]).
+
+frob(N) :- spin(frob(N), (sleep(N), writeln(N))).
+
+:- begin_tests(nest).
+
+test(foo) :-
+    true.
+%    nest(frob(_), (frob(1), frob(2))).
+
+:- end_tests(nest).

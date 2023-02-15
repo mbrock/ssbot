@@ -1,4 +1,8 @@
-:- module(nt, []).
+:- module(nt,
+          [ eink_show/1
+          , demo/1
+          , demo/2
+          ]).
 
 :- use_module(apis).
 :- use_module(discord).
@@ -13,13 +17,15 @@ eink_show(latex(Latex)) :-
 intent(guilds).
 intent(guild_messages).
 intent(guild_message_reactions).
+intent(direct_messages).
+intent(direct_message_reactions).
 
 all_intents(Intents) :-
     findall(I, intent(I), Intents).
 
 demo(discord) :-
     all_intents(Intents),
-    discord_session(Intents).
+    discord_session(1, Intents).
 
 demo(html, URL) :-
     http_open(URL, Stream, []),

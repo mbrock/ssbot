@@ -1,17 +1,16 @@
 :- module(nt_discord,
           [ start/2
+          , discord_session/2
           ]).
 
 :- use_module(secrets).
 :- use_module(base).
 :- use_module(apis).
+:- use_module(otp).
 
 :- use_module(library(http/websocket)).
-:- use_module(library(spawn)).
 :- use_module(library(apply_macros), []).
-
-:- debug(websocket).
-:- debug(websocket(_)).
+:- use_module(library(sweet)).
 
 :- dynamic discord_sequence/1.
 
@@ -59,8 +58,6 @@ discord_intents(1<<16, guild_scheduled_events).
 discord_intent_bitmask(Intents, Bitmask) :-
     findall(X, (member(I, Intents), discord_intents(X, I)), Bits),
     sum_list(Bits, Bitmask).
-
-:- debug(event).
 
 discord_receive(Socket, Message) :-
     ws_receive(Socket, Payload, [format(json)]),
@@ -113,24 +110,29 @@ discord_receive_loop(Socket) :-
     once(discord_receive(Socket, _Message)),
     discord_receive_loop(Socket).
 
-discord_session(Intents) :-
+discord_connect(Socket, Pulse) :-
     discord_gateway_url(URL),
     http_open_websocket(URL, Socket, []),
     once(discord_receive(Socket, Hello)),
-    once(discord_heartbeat(Socket)),
-    discord_heartbeat_interval(Hello, Seconds),
-    async(discord_heartbeat_loop(Socket, Seconds), Heartbeat),
-    thread_at_exit(await(Heartbeat)),
+    discord_heartbeat_interval(Hello, Pulse),
+    once(discord_heartbeat(Socket)).
+
+discord_session(Id, Intents) :-
+    discord_connect(Socket, Pulse),
+
+    spin(discord(Id, pulse),
+         discord_heartbeat_loop(Socket, Pulse)),
+
     once(discord_identify(Socket, Intents)),
     once(discord_receive(Socket, _Ready)),
-    async(discord_receive_loop(Socket), Receive),
-    thread_at_exit(await(Receive)),
-    writeln(waiting),
-    await(Heartbeat),
-    await(Receive).
+
+    spin(discord(Id, receive),
+         discord_receive_loop(Socket)),
+
+    writeln(waiting).
 
 start(discord, Intents) :-
-    discord_session(Intents).
+    discord_session(foo, Intents).
 
 
 
