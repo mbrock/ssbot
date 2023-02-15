@@ -1,6 +1,0 @@
-created(1676299867.6492336).
-assert(known_event(receive(websocket,discord,_{d:_{'_trace':["[\"gateway-prd-us-east1-d-l5w9\",{\"micros\":0.0}]"],heartbeat_interval:41250},op:10,s:null,t:null}),1676299867.6488717)).
-assert(known_event(post(telegram,["getUpdates"],json(_{timeout:5})),1676495908.4153798)).
-assert(known_event(post(telegram,["getUpdates"],json(_{timeout:5})),1676495920.9005644)).
-assert(known_event(post(telegram,["getUpdates"],json(_{timeout:5})),1676496044.2223556)).
-assert(known_event(post(telegram,["getUpdates"],json(_{timeout:5})),1676496150.2428467)).
