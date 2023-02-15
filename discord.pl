@@ -133,13 +133,3 @@ discord_session(Id, Intents) :-
 
 start(discord, Intents) :-
     discord_session(foo, Intents).
-
-
-
-
-
-
-
-
-
-

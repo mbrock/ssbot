@@ -20,8 +20,17 @@ base_url(discord, "https://discord.com/api/v10/").
 base_url(urbion, "http://urbion/epap/").
 base_url(readwise, "https://readwise.io/api/v2/").
 
+base_url(telegram, URL) :-
+    secret(telegram, Token),
+    format(string(URL), "https://api.telegram.org/bot~w/", [Token]).
+
 api_url(Service, Path, URL) :-
+    \+ Service = telegram,
     base_url(Service, Base),
+    string_concat(Base, Path, URL).
+
+api_url(telegram, Path, URL) :-
+    base_url(telegram, Base),
     string_concat(Base, Path, URL).
 
 api_auth(Service, Auth) :-
