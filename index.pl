@@ -10,8 +10,16 @@
 eink_show(latex(Latex)) :-
     api_post(urbion, ["DISPLAY-LATEX"], text(Latex), _).
 
+intent(guilds).
+intent(guild_messages).
+intent(guild_message_reactions).
+
+all_intents(Intents) :-
+    findall(I, intent(I), Intents).
+
 demo(discord) :-
-    start(discord, [guilds, guild_messages, guild_message_reactions]).
+    all_intents(Intents),
+    discord_session(Intents).
 
 demo(html, URL) :-
     http_open(URL, Stream, []),

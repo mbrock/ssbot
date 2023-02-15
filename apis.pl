@@ -9,6 +9,7 @@
 
 :- use_module(library(http/http_client)).
 :- use_module(library(http/http_json)).
+:- use_module(library(apply_macros)).
 
 bearer_prefix(discord, "Bot").
 bearer_prefix(readwise, "Token").
@@ -33,7 +34,7 @@ user_agent(_, "node.town").
 
 api_post(Service, PathComponents, Body, Result) :-
     atomics_to_string(PathComponents, "/", Path),
-    api_auth(Service, Auth),
+    once(api_auth(Service, Auth)),
     api_url(Service, Path, URL),
     user_agent(Service, UserAgent),
     http_post(URL, Body, Result,
@@ -47,7 +48,7 @@ api_post(Service, PathComponents, Result) :-
 
 api_get(Service, PathComponents, QueryParams, Result) :-
     user_agent(Service, UserAgent),
-    api_auth(Service, Auth),
+    once(api_auth(Service, Auth)),
     uri_query_components(Query, QueryParams),
     atomics_to_string(PathComponents, "/", Path),
     atomics_to_string([Path, Query], "?", PathWithQuery),
