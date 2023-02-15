@@ -1,4 +1,4 @@
-:- module(nt_openai,
+:- module(openai,
           [ completion/3
           , completion/4
           , embeddings/2

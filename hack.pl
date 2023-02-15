@@ -1,9 +1,10 @@
-:- module(nt_hack,
+:- module(hack,
           [ install_relevant_pack/3
           , save_pack_data/0
           , pack_embedding/2
           , known_pack/1,
-            relevant_pack/3
+            relevant_pack/3,
+            git/1
           ]).
 
 :- use_module(openai).
@@ -48,3 +49,6 @@ install_relevant_pack(Text, Name, Similarity) :-
     Pack = pack(Name, _, _, _, _),
     pack_install(Name, [interactive(false)]).
 
+git(X) :-
+    atomic_list_concat(['git', X], ' ', Command),
+    shell(Command).

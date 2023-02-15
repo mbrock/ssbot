@@ -1,4 +1,4 @@
-:- module(nt_secrets,
+:- module(secrets,
           [ secret/2
           , assert_known_secret/2
           ]).

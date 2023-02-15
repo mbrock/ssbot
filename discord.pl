@@ -1,4 +1,4 @@
-:- module(nt_discord,
+:- module(discord,
           [ start/2
           , discord_session/2
           ]).

@@ -1,4 +1,4 @@
-:- module(nt_telegram,
+:- module(telegram,
           [next_update/1,
            start/0,
            dump/0

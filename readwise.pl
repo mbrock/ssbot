@@ -1,4 +1,4 @@
-:- module(nt_readwise,
+:- module(readwise,
           [ readwise_item/1
           , save_readwise_embeddings/0
           ]).

@@ -1,4 +1,4 @@
-:- module(nt_eink, eink_show/1).
+:- module(eink, eink_show/1).
 :- use_module(apis).
 
 % The `urbion' computer has an e-ink display.
