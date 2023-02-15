@@ -52,3 +52,4 @@ install_relevant_pack(Text, Name, Similarity) :-
 git(X) :-
     atomic_list_concat(['git', X], ' ', Command),
     shell(Command).
+
