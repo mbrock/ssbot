@@ -8,7 +8,7 @@
 
 :- use_module(library(http/websocket)).
 :- use_module(library(spawn)).
-:- use_module(library(apply_macros)).
+:- use_module(library(apply_macros), []).
 
 :- debug(websocket).
 :- debug(websocket(_)).
@@ -120,9 +120,11 @@ discord_session(Intents) :-
     once(discord_heartbeat(Socket)),
     discord_heartbeat_interval(Hello, Seconds),
     async(discord_heartbeat_loop(Socket, Seconds), Heartbeat),
+    thread_at_exit(await(Heartbeat)),
     once(discord_identify(Socket, Intents)),
     once(discord_receive(Socket, _Ready)),
     async(discord_receive_loop(Socket), Receive),
+    thread_at_exit(await(Receive)),
     writeln(waiting),
     await(Heartbeat),
     await(Receive).
