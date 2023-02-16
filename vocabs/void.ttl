@@ -1,0 +1,34 @@
+@prefix    void: <http://rdfs.org/ns/void#> .
+@prefix    vann: <http://purl.org/vocab/vann/> .
+@prefix     lib: <http://www.swi-prolog.org/rdf/library/> .
+@prefix     owl: <http://www.w3.org/2002/07/owl#> .
+@prefix     rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix    rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix     xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix      dc: <http://purl.org/dc/terms/> .
+@prefix      as: <http://www.w3.org/ns/activitystreams#> .
+
+[ vann:preferredNamespacePrefix "as" ;
+  vann:preferredNamespaceUri "http://www.w3.org/ns/activitystreams#"
+] .
+
+[ vann:preferredNamespacePrefix "nt" ;
+  vann:preferredNamespaceUri "https://node.town/"
+] .
+
+<activitystreams>
+  a void:Dataset ;
+  dc:title "Activity Streams 2.0"@en ;
+  lib:source as: ;
+  void:dataDump <activitystreams-owl.ttl> .
+
+<nodetown>
+  a void:Dataset ;
+  dc:title "Node.Town" ;
+  lib:source <https://node.town/>  ;
+  void:dataDump <internet-ontology.ttl> .
+
+
+
+
+

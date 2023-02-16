@@ -4,8 +4,12 @@
           , demo/2
           ]).
 
+:- use_module(base).
 :- use_module(apis).
 :- use_module(discord).
+
+:- use_module(library(semweb/rdf11)).
+:- use_module(library(semweb/rdf_db), []).
 
 :- use_module(library(sgml)).
 :- use_module(library(http/http_open)).
@@ -33,5 +37,13 @@ demo(html, URL) :-
         load_html(Stream, DOM, []),
         close(Stream)),
     html_text(DOM, [width(500)]).
+
+message(receive(websocket, discord, X), Time, Message) :-
+    is_dict(X),
+    X.t = "MESSAGE_CREATE",
+    Content = X.content,
+    ChannelId = X.channel_id,
+    Author = X.author.
+
 
 
