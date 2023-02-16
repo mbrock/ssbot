@@ -3,7 +3,8 @@
           , save_event/1,
             know/3,
             deny/3,
-            grok/0
+            grok/0,
+            dump/1
           ]).
 
 :- dynamic user:file_search_path/2.
@@ -36,10 +37,26 @@ save_event(X) :-
     assert_known_event(X, Now),
     debug(event, "~p", [X]).
 
-know(S, P, O) :- know(S, P, O).
+:- rdf_meta spew(r, r, r).
+spew(S, P, O) :-
+    ansi_format([bold], "~w", [S]),
+    ansi_format([faint], " :: ~w :: ", [P]),
+    ansi_format([bold], "~w~n", [O]).
+
+:- rdf_meta know(r, r, r).
+know(S, P, O) :-
+    spew(S, P, O),
+    rdf_assert(S, P, O).
+
+:- rdf_meta deny(r, r, r).
 deny(S, P, O) :- deny(S, P, O).
 
-know(S, P, O, G) :- rdf_assert(S, P, O, G).
+:- rdf_meta know(r, r, r, r).
+know(S, P, O, G) :-
+    spew(S, P, O),
+    rdf_assert(S, P, O, G).
+
+:- rdf_meta deny(r, r, r, r).
 deny(S, P, O, G) :- rdf_retractall(S, P, O, G).
 
 alphabet(zb32, `ybndrfg8ejkmcpqxot1uwisza345h769`).
@@ -76,24 +93,58 @@ grok(receive(websocket, discord, X)) :-
     is_dict(X),
     string(X.t),
     X.t = Type,
-    grok(discord, Type, X).
+    grok(discord(Type, X)).
 
-grok(discord, "MESSAGE_CREATE", Message) :-
+grok(discord("MESSAGE_CREATE", Message)) :-
     mint(url(S)),
     writeln(S),
     writeln(Message),
 
-    know(S, rdf:type, 'as:Note').
+    know(S, rdf:type, as:'Note').
+
+grok(telegram(X)) :-
+    Id = X.get(message/message_id),
+    Text = X.get(message/text),
+    Username = X.get(message/from/username),
+    Timestamp = X.get(message/date),
+
+    number(Id),
+    string(Text),
+    string(Username),
+    number(Timestamp),
+    stamp_date_time(Timestamp, _Date, local),
+
+    writeln(X),
+    
+    once(mint(url(S))),
+    
+    know(S, rdf:type, as:'Note'),
+    know(S, nt:'net/telegramId', Id),
+    know(S, as:content, Text),
+    know(S, as:published, Timestamp),
+    know(S, as:attributedTo, Username).
 
 grok :-
     known_event(E, _T),
     grok(E).
 
-filter(S, P, O) :-
+filter(S, P, _O) :-
     G = 'http://www.w3.org/ns/activitystreams',
     rdf(S, P, owl:'ObjectProperty', G).
 
-export(X) :-
+turtle(Stream, Graph) :-
+    rdf_save_turtle(
+        stream(Stream),
+        [align_prefixes(true),
+         comment(false),
+         indent(2),
+         graph(G),
+         tab_distance(0)]).
+
+dump(default) :-
+    turtle(user_output, default).
+
+dump(as) :-
     mint(url(G)),
     !,
     cleanup(deny(_, _, _, G)),
@@ -102,12 +153,7 @@ export(X) :-
         know(S, P, O, G)
     ),
     tmp_file_stream(F, Stream, [extension("ttl")]),
-    cleanup(read_file_to_string(F, X, [])),
+    cleanup((read_file_to_string(F, X, []), writeln(X))),
     cleanup(close(Stream)),
-    rdf_save_turtle(
-        stream(Stream),
-        [align_prefixes(true),
-         comment(false),
-         indent(2),
-         graph(G),
-         tab_distance(0)]).
+    turtle(Stream, G).
+
