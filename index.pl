@@ -19,7 +19,7 @@
 
 serve :-
     gethostname(Hostname),
-    format(atom(Graph), 'http://~w:4000/', [Hostname]),
+    format(atom(Graph), 'http://~w:4000/graph', [Hostname]),
     rdf_create_graph(Graph),
     rdf_default_graph(_, Graph),
     format("%% nt: using graph ~w~n", [Graph]),
