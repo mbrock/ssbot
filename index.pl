@@ -4,6 +4,8 @@
           ]).
 
 :- use_module(base).
+:- use_module(discord).
+:- use_module(telegram).
 
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -13,27 +15,20 @@
 :- use_module(library(http/json)).
 :- use_module(library(http/http_dispatch)).
 
+:- use_module(library(semweb/turtle)).
+:- use_module(library(semweb/rdf_http_plugin)).
+:- use_module(library(http/http_ssl_plugin)).
+
 :- use_module(library(pengines)).
 
 :- http_handler(root(.), graph(html), []).
 :- http_handler(root(graph), graph(ttl), []).
 
-host(X) :-
-    gethostname(Hostname),
-    (   atom_concat(X, '.local', Hostname)
-    ->  true
-    ;   X = Hostname
-    ).
-
-graph_name(Graph) :-
-    host(Hostname),
-    format(atom(Graph), 'http://~w:4000/graph', [Hostname]).
-
 serve :-
-    graph_name(Graph),
-    rdf_create_graph(Graph),
-    rdf_default_graph(_, Graph),
-    format("%% nt: using graph ~w~n", [Graph]),
+    graph_url(G),
+    format("%% nt: using graph ~w~n", [G]),
+    rdf_create_graph(G),
+    rdf_default_graph(_, G),
 
     catch((http_stop_server(4000, []),
            writeln('% nt: stopped server')),
@@ -55,16 +50,17 @@ graph(html, _Request) :-
                  "section { display: flex; flex-wrap: wrap; gap: 1em }"
                 ])
         ],
-        [h1('node.town inspector'),
+        [h1('node.town'),
          \graph_view]).
 
 graph(ttl, _Request) :-
     format('content-type: text/turtle~n~n'),
-    turtle(current_output, hamlet:graph).
+    graph_url(G),
+    turtle(current_output, G).
 
 description(Subject, Pairs) :-
     rdf_resource(Subject),
-    (rdf(Subject, _, _, default) -> true),
+    (rdf(Subject, _, _, nt:graph) -> true),
     findall(P-O, rdf(Subject, P, O), Pairs).
 
 descriptions(Descriptions) :-

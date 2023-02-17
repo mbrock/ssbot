@@ -10,6 +10,7 @@
 
 @prefix	  yacht: <http://yacht:4000/>.
 @prefix	 hamlet: <http://hamlet:4000/>.
+@prefix      nt: <https://node.town/>.
 
 [ vann:preferredNamespacePrefix "as" ;
   vann:preferredNamespaceUri "http://www.w3.org/ns/activitystreams#"
@@ -34,13 +35,9 @@
   dc:title "Internet Ontology Very Good 2.0" ;
   void:dataDump <internet-ontology.ttl> .
 
-<hamlet> a void:Dataset ;
-  dc:title "Node.Town: Megastar RDF Nexus 3.0" ;
-  void:dataDump hamlet:graph .
-
-<yacht> a void:Dataset ;
-  dc:title "Node.Town: Riga Big Mac" ;
-  void:dataDump yacht:graph .
+<nodetown> a void:Dataset ;
+  dc:title "Node.Town: Mesh Hybrid Mashup 4.0" ;
+  void:dataDump nt:graph .
 
 <rdfs> a void:Dataset ;
   dc:title "RDF Schema" ;

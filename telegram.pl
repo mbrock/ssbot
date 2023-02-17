@@ -1,7 +1,7 @@
 :- module(telegram,
-          [next_update/1,
-           start/0,
-           dump/0
+          [dump/0,
+           telegram/0,
+           next_update/0
           ]).
 
 :- use_module(base).
@@ -13,7 +13,7 @@
 :- use_module(library(persistency)).
 
 :- persistent
-       sequence(token:atom, id:nonneg).
+       sequence(token:string, id:nonneg).
 
 :- db_attach("telegram.db", []).
 
@@ -30,22 +30,30 @@ poll_opts(Token, Opts) :-
     poll_timeout(Timeout),
     Opts = _{timeout: Timeout}.
 
-next_update(Update) :-
+next_update :-
     once(secret(telegram, Token)),
     poll_opts(Token, Opts),
     once(api_post(telegram, ["getUpdates"], json(Opts), Result)),
+    debug(telegram, "Result ~w~n", [Result]),
     Result = _{ok: true, result: Updates},
-    member(Update, Updates),
-    save_event(recv(telegram, Update)),
+    foreach(
+        member(Update, Updates),
+        ( save_event(recv(telegram, Update)),
+          print_update(Update)
+        )),
+
+    findall(I, (member(Update, Updates), I = Update.update_id), Ids),
+    max_list(Ids, Max),
     retractall_sequence(Token, _Id),
-    assert_sequence(Token, Update.update_id).
+    debug(telegram, "New sequence: ~w~n", [Max]),
+    assert_sequence(Token, Max).
 
 loop :-
     debug(telegram, "Polling...", []),
-    foreach(next_update(Update), print_update(Update)),
+    foreach(next_update, true),
     loop.
 
-start :-
+telegram :-
     spin(telegram(poll), loop).
 
 dump :-

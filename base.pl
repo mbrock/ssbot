@@ -9,16 +9,18 @@
             dump/2,
             deny/0,
             turtle/2,
-            sync/1
+            sync/1,
+            graph_url/1
           ]).
 
 :- use_module(library(semweb/rdf11)).
-:- use_module(library(semweb/rdf_db), [(rdf_meta)/1]).
+:- use_module(library(semweb/rdf_db), [(rdf_meta)/1, rdf_load/2]).
 :- use_module(library(semweb/rdf_persistency)).
 :- use_module(library(semweb/rdf_library)).
 :- use_module(library(semweb/rdf_portray), []).
 :- use_module(library(semweb/turtle)).
 :- use_module(library(semweb/rdf_http_plugin)).
+:- use_module(library(http/http_ssl_plugin)).
 :- use_module(library(persistency)).
 :- use_module(library(sweet)).
 :- use_module(library(yall)).
@@ -35,14 +37,18 @@
 :- rdf_attach_library(
        nodetown("vocabs/void.ttl")).
 
+:- rdf_load_library(activitystreams).
+:- rdf_load_library(internet).
+:- rdf_load_library(rdf).
+:- rdf_load_library(rdfs).
+:- rdf_load_library(owl).
+:- rdf_load_library(dc).
+
+graph_url('https://node.town/graph').
+
 sync(X) :-
-    rdf_load_library(activitystreams),
-    rdf_load_library(internet),
-    rdf_load_library(rdf),
-    rdf_load_library(rdfs),
-    rdf_load_library(owl),
-    rdf_load_library(dc),
-    rdf_load_library(X).
+    format(atom(S), "http://~w:4000/graph", [X]),
+    rdf_load(S, [graph('https://node.town/graph')]).
 
 :- persistent
        known_event(data:any, time:float).
@@ -52,7 +58,15 @@ sync(X) :-
 save_event(X) :-
     get_time(Now),
     assert_known_event(X, Now),
-    debug(event, "~p", [X]).
+    debug(event, "~p", [X]),
+    ignore(grok(X)).
+
+migrate :-
+    known_event(E, T),
+    E = receive(websocket, discord, X),
+    writeln(E),
+    retract_known_event(E, T),
+    assert_known_event(recv(discord, X), T).
 
 :- rdf_meta
        spew(r, r, o),
@@ -68,7 +82,7 @@ spew(S, P, O) :-
     ansi_format([bold], "~w~n", [O]).
 
 know(S, P, O) :-
-    rdf_default_graph(G),
+    graph_url(G),
     know(S, P, O, G).
 
 know(S, P, O, G) :-
@@ -142,6 +156,7 @@ grok(X) :-
     format("ignoring ~w~n", [X]).
 
 item(Dict, Path, Type, Value) :-
+    is_dict(Dict),
     Value = Dict.get(Path),
     call(Type, Value).
 
@@ -192,13 +207,12 @@ unix_date(Unix, Date) :-
     Date = date_time(Y, M, D, HH, MM, SS, Offset).
 
 turtle(Stream, Graph) :-
-    rdf_global_id(Graph, GraphURL),
     rdf_save_turtle(
         stream(Stream),
         [align_prefixes(true),
          comment(false),
          indent(4),
-         graph(GraphURL),
+         graph(Graph),
          tab_distance(0)]).
 
 dump(String, Goal) :-
