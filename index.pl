@@ -27,7 +27,7 @@ host(X) :-
 
 graph_name(Graph) :-
     host(Hostname),
-    format(atom(Graph), 'http://~w:4000/', [Hostname]).
+    format(atom(Graph), 'http://~w:4000/graph', [Hostname]).
 
 serve :-
     graph_name(Graph),
