@@ -10,16 +10,16 @@
 :- use_module(library(semweb/rdf_db), []).
 
 :- use_module(library(http/thread_httpd)).
-:- use_module(library(http/http_dispatch)).
 :- use_module(library(http/html_write)).
 :- use_module(library(http/json)).
 
 :- use_module(library(arouter)).
 
 :- route_get(/, index(html)).
-:- route_get('graph.ttl', index(ttl)).
+:- route_get('graph', index(ttl)).
 
 serve :-
+    http_stop_server(4000, []),
     http_server(route, [port(4000)]).
 
 index(html) :-
@@ -40,7 +40,7 @@ index(html) :-
 
 index(ttl) :-
     format('content-type: text/turtle~n~n'),
-    turtle(current_output, default).
+    turtle(current_output, hamlet:graph).
 
 description(Subject, Pairs) :-
     rdf_resource(Subject),

@@ -13,7 +13,7 @@
           ]).
 
 :- use_module(library(semweb/rdf11)).
-:- use_module(library(semweb/rdf_db), []).
+:- use_module(library(semweb/rdf_db), [(rdf_meta)/1]).
 :- use_module(library(semweb/rdf_persistency)).
 :- use_module(library(semweb/rdf_library)).
 :- use_module(library(semweb/rdf_portray), []).
@@ -172,12 +172,13 @@ unix_date(Unix, Date) :-
     Date = date_time(Y, M, D, HH, MM, SS, Offset).
 
 turtle(Stream, Graph) :-
+    rdf_global_id(Graph, GraphURL),
     rdf_save_turtle(
         stream(Stream),
         [align_prefixes(true),
          comment(false),
          indent(4),
-         graph(Graph),
+         graph(GraphURL),
          tab_distance(0)]).
 
 dump(String, Goal) :-

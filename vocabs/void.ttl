@@ -8,6 +8,9 @@
 @prefix      dc: <http://purl.org/dc/terms/> .
 @prefix      as: <http://www.w3.org/ns/activitystreams#> .
 
+@prefix	  yacht: <http://yacht:4000/>.
+@prefix	 hamlet: <http://hamlet:4000/>.
+
 [ vann:preferredNamespacePrefix "as" ;
   vann:preferredNamespaceUri "http://www.w3.org/ns/activitystreams#"
 ] .
@@ -15,6 +18,12 @@
 [ vann:preferredNamespacePrefix "nt" ;
   vann:preferredNamespaceUri "https://node.town/"
 ] .
+
+[ vann:preferredNamespacePrefix "hamlet" ;
+  vann:preferredNamespaceUri "http://hamlet:4000/" ].
+
+[ vann:preferredNamespacePrefix "yacht" ;
+  vann:preferredNamespaceUri "http://yacht:4000/" ].
 
 <activitystreams> a void:Dataset ;
   dc:title "Activity Streams 2.0"@en ;
@@ -27,13 +36,11 @@
 
 <hamlet> a void:Dataset ;
   dc:title "Node.Town: Megastar RDF Nexus 3.0" ;
-  lib:source <https://node.town/graph> ;
-  void:dataDump <http://hamlet:4000/graph.ttl> .
+  void:dataDump hamlet:graph .
 
 <yacht> a void:Dataset ;
   dc:title "Node.Town: Riga Big Mac" ;
-  lib:source <https://node.town/graph> ;
-  void:dataDump <http://yacht:4000/graph.ttl> .
+  void:dataDump yacht:graph .
 
 <rdfs> a void:Dataset ;
   dc:title "RDF Schema" ;

@@ -39,11 +39,11 @@ let
 #      ediprolog
 
       sweeprolog
-      
+
       # required for copilot.el
       dash s editorconfig
     ]);
-  
+
   my-swi-prolog =
     (pkgs.swiProlog.override { withGui = true; }).overrideAttrs (old:
       let version = "9.1.4";
@@ -64,15 +64,22 @@ let
         buildInputs = old.buildInputs ++ [pkgs.emacs pkgs.pcre2];
       }
     );
-  
+
+  no-mac = pkg:
+    if pkgs.stdenv.isDarwin
+    then []
+    else [pkg];
+
 in {
   # https://devenv.sh/packages/
-  packages = with pkgs; [
+  packages = with pkgs; (
+    no-mac [my-swi-prolog]
+  ) ++ [
     devtools.restless-git
-    
+
     screen
-    inotify-tools
-    
+    # inotify-tools
+
     jq
     ripgrep
     jless
@@ -80,7 +87,7 @@ in {
 
     graphviz
     imagemagick
-    
+
     git
     sqlite
 #    datasette
@@ -100,11 +107,9 @@ in {
 
 #    scryer-prolog
 
-    my-swi-prolog
-
 #    elixir-version
 #    (elixir_ls.override { elixir = elixir-version; })
-    
+
     my-emacs
 
 #    (texlive.combine {
@@ -128,7 +133,7 @@ in {
     nodetown-tailscale.exec = ''
       sudo tailscale up --accept-routes
     '';
-    
+
     nodetown.exec = ''
       iex --name nodetown@$(hostname) --cookie nodetown \
         -S mix phx.server
@@ -137,7 +142,7 @@ in {
     gensym.exec = ''
       cat /dev/urandom | tr -dc 'a-z' | fold -w 8 | head -n 1
     '';
-    
+
     nodetown-remote.exec = ''
       set -x
       iex --sname $(gensym) --cookie nodetown \
@@ -153,7 +158,7 @@ in {
       mix do local.rebar --force, local.hex --force
       mix escript.install hex livebook
     '';
-    
+
     nodetown-livebook.exec = ''
       export LIVEBOOK_DEFAULT_RUNTIME=attached:nodetown@$(hostname):nodetown
       export LIVEBOOK_PASSWORD=nodetown-$(hostname)
@@ -164,35 +169,13 @@ in {
     nodetown-datasette.exec = ''
       datasette --host 0.0.0.0 nodetown_dev.db
     '';
-
-    nodetown-vnc.exec =
-      let
-        width = 1400;
-        height = 900;
-        sizeString = "${toString width}x${toString height}x16";
-      in ''
-       set -ex
-       export DISPLAY=:1
- 
-       ${pkgs.xvfb-run}/bin/xvfb-run -n 1 -s "-screen 0 ${sizeString}" \
-         ${pkgs.dbus.dbus-launch} --exit-with-session \
-           ${pkgs.openbox}/bin/openbox &
-
-       sleep 3
-       ${pkgs.xterm}/bin/xterm &
- 
-       ${pkgs.x11vnc}/bin/x11vnc -forever -shared -quiet -display :1 \
-         -noxrecord -xkb -passwd nodetown &
- 
-       wait
-     '';
   };
 
   enterShell = ''
     export PATH="$HOME/.mix/escripts:$PATH"
     export EMACSDIR=$(pwd)
     export TERM=xterm-256color
-    
+
     # This was necessary to install ExFaiss.
     export CPLUS_INCLUDE_PATH="$C_INCLUDE_PATH"
 
@@ -202,10 +185,12 @@ in {
     export TERMINUSDB_SERVER_IP=0.0.0.0
     export TERMINUSDB_AUTOLOGIN_ENABLED=false
 
-    export LD_PRELOAD=${my-swi-prolog}/lib/libswipl.so
-
     jq < ${devcontainer-config} \
        > ${config.env.DEVENV_ROOT}/.devcontainer.json
+
+    ${if pkgs.stdenv.isDarwin
+      then ""
+      else "export LD_PRELOAD=${my-swi-prolog}/lib/libswipl.so"}}
   '';
 
   # https://devenv.sh/languages/
@@ -226,4 +211,26 @@ in {
   processes.code-server.exec = ''
     ${pkgs.code-server}/bin/code-server --bind-addr 127.0.0.1:5000
   '';
+
+  processes.nodetown-vnc.exec =
+    let
+      width = 1400;
+      height = 900;
+      sizeString = "${toString width}x${toString height}x16";
+    in ''
+      set -ex
+      export DISPLAY=:1
+
+      ${pkgs.xvfb-run}/bin/xvfb-run -n 1 -s "-screen 0 ${sizeString}" \
+        ${pkgs.dbus.dbus-launch} --exit-with-session \
+          ${pkgs.openbox}/bin/openbox &
+
+      sleep 3
+      ${pkgs.xterm}/bin/xterm &
+
+      ${pkgs.x11vnc}/bin/x11vnc -forever -shared -quiet -display :1 \
+        -noxrecord -xkb -passwd nodetown &
+
+      wait
+    '';
 }
