@@ -42,7 +42,7 @@ serve :-
 
     http_server(http_dispatch, [port(4000)]).
 
-graph(html) :-
+graph(html, _Request) :-
     reply_html_page(
         [ title('node.town'),
           link([rel(stylesheet),
@@ -58,7 +58,7 @@ graph(html) :-
         [h1('node.town inspector'),
          \graph_view]).
 
-graph(ttl) :-
+graph(ttl, _Request) :-
     format('content-type: text/turtle~n~n'),
     turtle(current_output, hamlet:graph).
 
