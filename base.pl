@@ -35,14 +35,13 @@
 :- rdf_attach_library(
        nodetown("vocabs/void.ttl")).
 
-:- rdf_load_library(activitystreams).
-:- rdf_load_library(internet).
-:- rdf_load_library(rdf).
-:- rdf_load_library(rdfs).
-:- rdf_load_library(owl).
-:- rdf_load_library(dc).
-
 sync(X) :-
+    rdf_load_library(activitystreams),
+    rdf_load_library(internet),
+    rdf_load_library(rdf),
+    rdf_load_library(rdfs),
+    rdf_load_library(owl),
+    rdf_load_library(dc),
     rdf_load_library(X).
 
 :- persistent
@@ -115,13 +114,32 @@ mint(key(T, X)) :-
     !,
     atom_codes(X, Chars).
 
+id_scope_relation(Relation, Service) :-
+    rdf(Relation, nt:idScope, Service).
+
+scoped_id(X, ID, Graph, URL) :-
+    id_scope_relation(Relation, _Service),
+    grok(X, Relation, ID),
+    rdf(URL, Relation, ID, Graph).
+
+link(X, URL) :-
+    (   scoped_id(X, ID, Graph, URL), !,
+        format("Linking ~w (~w) [~w]~n", [URL, ID, Graph])
+    ->  true
+    ;   mint(url(URL))
+    ,   format("Minting ~w~n", [URL])
+    ).
+
 grok(X) :-
     grok(X, rdf:type, _),
-    mint(url(S)), !,
-    writeln(S),
+    link(X, S), !,
     foreach(grok(X, P, O),
-            (format("~w :: ~w :: ~w~n", [S, P, O]),
-             know(S, P, O))).
+            (know(S, P, O))),
+    format("linked ~w to ~w~n~n", [X, S]).
+
+grok(X) :-
+    \+ grok(X, rdf:type, _),
+    format("ignoring ~w~n", [X]).
 
 item(Dict, Path, Type, Value) :-
     Value = Dict.get(Path),
@@ -164,6 +182,8 @@ grok(recv(discord, X), as:attributedTo, O) :-
 
 grok :-
     known_event(E, _T),
+    E = recv(_, _),
+    grok(E, rdf:type, _),
     grok(E).
 
 unix_date(Unix, Date) :-
