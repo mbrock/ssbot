@@ -73,7 +73,7 @@ let
 in {
   # https://devenv.sh/packages/
   packages = with pkgs; (
-    no-mac [my-swi-prolog]
+    no-mac my-swi-prolog
   ) ++ [
     devtools.restless-git
 
@@ -190,7 +190,7 @@ in {
 
     ${if pkgs.stdenv.isDarwin
       then ""
-      else "export LD_PRELOAD=${my-swi-prolog}/lib/libswipl.so"}}
+      else "export LD_PRELOAD=${my-swi-prolog}/lib/libswipl.so"}
   '';
 
   # https://devenv.sh/languages/

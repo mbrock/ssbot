@@ -3,8 +3,6 @@
           ]).
 
 :- use_module(base).
-:- use_module(apis).
-:- use_module(discord).
 
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -12,17 +10,28 @@
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/html_write)).
 :- use_module(library(http/json)).
+:- use_module(library(http/http_dispatch)).
 
-:- use_module(library(arouter)).
+:- use_module(library(pengines)).
 
-:- route_get(/, index(html)).
-:- route_get('graph', index(ttl)).
+:- http_handler(root(.), graph(html), []).
+:- http_handler(root(graph), graph(ttl), []).
 
 serve :-
-    http_stop_server(4000, []),
-    http_server(route, [port(4000)]).
+    gethostname(Hostname),
+    format(atom(Graph), 'http://~w:4000/', [Hostname]),
+    rdf_create_graph(Graph),
+    rdf_default_graph(_, Graph),
+    format("%% nt: using graph ~w~n", [Graph]),
+    
+    catch((http_stop_server(4000, []),
+           writeln('% nt: stopped server')),
+          error(existence_error(http_server, _), _),
+          writeln('% no server running')),
+    
+    http_server(http_dispatch, [port(4000)]).
 
-index(html) :-
+graph(html) :-
     reply_html_page(
         [ title('node.town'),
           link([rel(stylesheet),
@@ -38,7 +47,7 @@ index(html) :-
         [h1('node.town inspector'),
          \graph_view]).
 
-index(ttl) :-
+graph(ttl) :-
     format('content-type: text/turtle~n~n'),
     turtle(current_output, hamlet:graph).
 
