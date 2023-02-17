@@ -92,12 +92,19 @@ nt:Scrape a as:Service .
 ### Messenger stuff
 
 nt:platform a owl:ObjectProperty ;
+  rdfs:label "platform" ;
   rdfs:domain as:Object ;
   rdfs:range as:Object .
 
 nt:Telegram a as:Service ;
+  rdfs:label "Telegram" ;
   as:name "Telegram"@en ;
   as:url <https://telegram.org> .
+
+nt:Discord a as:Service ;
+  rdfs:label "Discord" ;
+  as:name "Discord"@en ;
+  as:url <https://discord.com> .
 
 nt:idScope a owl:ObjectProperty ;
   rdfs:domain owl:Property ;
@@ -105,6 +112,13 @@ nt:idScope a owl:ObjectProperty ;
 
 nt:telegramId a owl:DatatypeProperty ;
   nt:idScope nt:Telegram ;
+  rdfs:label "telegramId" ;
+  rdfs:domain as:Object ;
+  rdfs:range xsd:integer .
+
+nt:discordId a owl:DatatypeProperty ;
+  nt:idScope nt:Discord ;
+  rdfs:label "discordId" ;
   rdfs:domain as:Object ;
   rdfs:range xsd:integer .
 

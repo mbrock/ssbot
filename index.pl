@@ -12,6 +12,7 @@
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/html_write)).
+:- use_module(library(http/json)).
 
 % demo(html, URL) :-
 %     http_open(URL, Stream, []),
@@ -30,7 +31,13 @@ say_hi(_Request) :-
         [ title('node.town'),
           link([rel(stylesheet),
                 href('https://font.node.town/index.css')]),
-          style('body { font-family: "Berkeley Mono", monospace; }')
+          style(['body { font-family: "Berkeley Mono", monospace; }',
+                 "article { border: 1px solid #ccc; padding: .5em; }",
+                 "article > h2 { margin: 0; margin-bottom: 0.5em; }",
+                 "h1, h2 { font-size: inherit; }",
+                 "article { width: 30em; }",
+                 "section { display: flex; flex-wrap: wrap; gap: 1em }"
+                ])
         ],
         [h1('node.town inspector'),
          \graph_view]).
@@ -47,7 +54,7 @@ descriptions(Descriptions) :-
 
 graph_view -->
         { descriptions(Descriptions) },
-        html(ul(\description_tables(Descriptions))).
+        html(section(\description_tables(Descriptions))).
 
 :- rdf_meta show(t, ?, ?).
 
@@ -59,7 +66,7 @@ properties([P-O|T]) -->
 
 description_tables([]) --> [].
 description_tables([Subject-Pairs|T]) -->
-        html(li([h2("~w"-Subject), table(\properties(Pairs))])),
+        html(article([h2("~w"-Subject), table(\properties(Pairs))])),
         description_tables(T).
 
 show(X^^_Y) -->

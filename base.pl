@@ -103,45 +103,52 @@ mint(key(T, X)) :-
     !,
     atom_codes(X, Chars).
 
-grok(receive(websocket, discord, X)) :-
-    is_dict(X),
-    string(X.t),
-    X.t = Type,
-    grok(discord(Type, X)).
-
-grok(discord("MESSAGE_CREATE", Message)) :-
-    mint(url(S)),
+grok(X) :-
+    grok(X, rdf:type, _),
+    mint(url(S)), !,
     writeln(S),
-    writeln(Message),
-
-    know(S, rdf:type, as:'Note').
-
-grok(telegram(X)) :-
-    grok(telegram(X), rdf:type, _),
-    mint(url(S)),
-    !,
-    foreach(grok(telegram(X), P, O),
-            know(S, P, O)).
+    foreach(grok(X, P, O),
+            (format("~w :: ~w :: ~w~n", [S, P, O]),
+             know(S, P, O))).
 
 item(Dict, Path, Type, Value) :-
     Value = Dict.get(Path),
     call(Type, Value).
 
-grok(telegram(X), rdf:type, as:'Note') :-
+grok(recv(telegram, _), nt:platform, nt:'Telegram').
+
+grok(recv(telegram, X), rdf:type, as:'Note') :-
     item(X, message/text, string, _).
 
-grok(telegram(X), nt:telegramId, V) :-
+grok(recv(telegram, X), nt:telegramId, V) :-
     item(X, message/message_id, integer, V).
 
-grok(telegram(X), as:content, V) :-
+grok(recv(telegram, X), as:content, V) :-
     item(X, message/text, string, V).
 
-grok(telegram(X), as:published, V) :-
+grok(recv(telegram, X), as:published, V) :-
     item(X, message/date, number, Timestamp),
     unix_date(Timestamp, V).
 
-grok(telegram(X), as:attributedTo, V) :-
+grok(recv(telegram, X), as:attributedTo, V) :-
     item(X, message/from/username, string, V).
+
+grok(recv(discord, _), nt:platform, nt:'Discord').
+
+grok(recv(discord, X), rdf:type, as:'Note') :-
+    item(X, t, string, "MESSAGE_CREATE").
+
+grok(recv(discord, X), nt:discordId, V) :-
+    item(X, d/id, string, V).
+
+grok(recv(discord, X), as:content, O) :-
+    item(X, d/content, string, O).
+
+grok(recv(discord, X), as:published, O) :-
+    item(X, d/timestamp, string, O).
+
+grok(recv(discord, X), as:attributedTo, O) :-
+    item(X, d/author/username, string, O).
 
 grok :-
     known_event(E, _T),
