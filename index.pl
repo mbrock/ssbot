@@ -24,9 +24,9 @@
 serve :-
     http_server(http_dispatch, [port(4000)]).
 
-:- http_handler(root(.), say_hi, []).
+:- http_handler(root(.), index, []).
 
-say_hi(_Request) :-
+index(_Request) :-
     reply_html_page(
         [ title('node.town'),
           link([rel(stylesheet),
