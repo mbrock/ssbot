@@ -7,7 +7,8 @@
             dump/1,
             deny/4,
             dump/2,
-            deny/0
+            deny/0,
+            turtle/2
           ]).
 
 :- use_module(library(semweb/rdf11)).
@@ -32,6 +33,13 @@
 
 :- rdf_attach_library(
        nodetown("vocabs/void.ttl")).
+
+:- rdf_load_library(activitystreams).
+:- rdf_load_library(nodetown).
+:- rdf_load_library(rdf).
+:- rdf_load_library(rdfs).
+:- rdf_load_library(owl).
+:- rdf_load_library(dc).
 
 :- persistent
        known_event(data:any, time:float).

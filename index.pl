@@ -24,9 +24,10 @@
 serve :-
     http_server(http_dispatch, [port(4000)]).
 
-:- http_handler(root(.), index, []).
+:- http_handler(root(.), index(html), []).
+:- http_handler(root(index.ttl), index(ttl), []).
 
-index(_Request) :-
+index(html, Request) :-
     reply_html_page(
         [ title('node.town'),
           link([rel(stylesheet),
@@ -41,6 +42,13 @@ index(_Request) :-
         ],
         [h1('node.town inspector'),
          \graph_view]).
+
+index(ttl, Request) :-
+    reply_turtle.
+
+reply_turtle :-
+    format('Content-type: text/turtle~n~n'),
+    turtle(current_output, default).
 
 description(Subject, Pairs) :-
     rdf_resource(Subject),
