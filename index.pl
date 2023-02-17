@@ -1,5 +1,6 @@
 :- module(nt,
-          [ serve/0
+          [ serve/0,
+            graph/1
           ]).
 
 :- use_module(base).
@@ -17,18 +18,28 @@
 :- http_handler(root(.), graph(html), []).
 :- http_handler(root(graph), graph(ttl), []).
 
-serve :-
+host(X) :-
     gethostname(Hostname),
-    format(atom(Graph), 'http://~w:4000/graph', [Hostname]),
+    (   atom_concat(X, '.local', Hostname)
+    ->  true
+    ;   X = Hostname
+    ).
+
+graph_name(Graph) :-
+    host(Hostname),
+    format(atom(Graph), 'http://~w:4000/', [Hostname]).
+
+serve :-
+    graph_name(Graph),
     rdf_create_graph(Graph),
     rdf_default_graph(_, Graph),
     format("%% nt: using graph ~w~n", [Graph]),
-    
+
     catch((http_stop_server(4000, []),
            writeln('% nt: stopped server')),
           error(existence_error(http_server, _), _),
           writeln('% no server running')),
-    
+
     http_server(http_dispatch, [port(4000)]).
 
 graph(html, _Request) :-
