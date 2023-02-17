@@ -28,7 +28,22 @@
   lib:source <https://node.town/>  ;
   void:dataDump <internet-ontology.ttl> .
 
+<rdfs> a void:Dataset ;
+  dc:title "RDF Schema" ;
+  lib:source rdfs: ;
+  void:dataDump <rdfs.ttl> .
 
+<rdf> a void:Dataset ;
+  dc:title "RDF" ;
+  lib:source rdf: ;
+  void:dataDump <rdf.ttl> .
 
+<owl> a void:Dataset ;
+  dc:title "OWL" ;
+  lib:source owl: ;
+  void:dataDump <owl.ttl> .
 
-
+<dc> a void:Dataset ;
+  dc:title "Dublin Core" ;
+  lib:source dc: ;
+  void:dataDump <dc.ttl> .

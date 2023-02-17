@@ -4,14 +4,11 @@
             know/3,
             deny/3,
             grok/0,
-            dump/1
+            dump/1,
+            deny/4,
+            dump/2,
+            deny/0
           ]).
-
-:- dynamic user:file_search_path/2.
-:- multifile user:file_search_path/2.
-
-:- prolog_load_context(directory, Dir),
-   asserta(user:file_search_path(nodetown, Dir)).
 
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -20,15 +17,24 @@
 :- use_module(library(semweb/rdf_portray), []).
 :- use_module(library(semweb/turtle)).
 
-:- rdf_attach_db(user_app_data("nodetown.rdf.db"), []).
-:- rdf_attach_library(nodetown("vocabs/void.ttl")).
-
 :- use_module(library(persistency)).
-
 :- use_module(library(sweet)).
+:- use_module(library(yall)).
+
+:- dynamic user:file_search_path/2.
+:- multifile user:file_search_path/2.
+
+:- prolog_load_context(directory, Dir),
+   asserta(user:file_search_path(nodetown, Dir)).
+
+:- rdf_attach_db(
+       user_app_data("nodetown.rdf.db"), []).
+
+:- rdf_attach_library(
+       nodetown("vocabs/void.ttl")).
 
 :- persistent
-    known_event(data:any, time:float).
+       known_event(data:any, time:float).
 
 :- db_attach("events.db", []).
 
@@ -37,27 +43,35 @@ save_event(X) :-
     assert_known_event(X, Now),
     debug(event, "~p", [X]).
 
-:- rdf_meta spew(r, r, r).
+:- rdf_meta
+       spew(r, r, o),
+       know(r, r, o),
+       know(r, r, o, +),
+       deny(r, r, o),
+       deny(r, r, o, +),
+       grok(+, r, o).
+
 spew(S, P, O) :-
     ansi_format([bold], "~w", [S]),
     ansi_format([faint], " :: ~w :: ", [P]),
     ansi_format([bold], "~w~n", [O]).
 
-:- rdf_meta know(r, r, r).
 know(S, P, O) :-
-    spew(S, P, O),
-    rdf_assert(S, P, O).
+    rdf_default_graph(G),
+    know(S, P, O, G).
 
-:- rdf_meta deny(r, r, r).
-deny(S, P, O) :- deny(S, P, O).
-
-:- rdf_meta know(r, r, r, r).
 know(S, P, O, G) :-
     spew(S, P, O),
     rdf_assert(S, P, O, G).
 
-:- rdf_meta deny(r, r, r, r).
-deny(S, P, O, G) :- rdf_retractall(S, P, O, G).
+deny :-
+    deny(_, _, _, default).
+
+deny(S, P, O) :-
+    deny(S, P, O, _).
+
+deny(S, P, O, G) :-
+    rdf_retractall(S, P, O, G).
 
 alphabet(zb32, `ybndrfg8ejkmcpqxot1uwisza345h769`).
 
@@ -103,57 +117,58 @@ grok(discord("MESSAGE_CREATE", Message)) :-
     know(S, rdf:type, as:'Note').
 
 grok(telegram(X)) :-
-    Id = X.get(message/message_id),
-    Text = X.get(message/text),
-    Username = X.get(message/from/username),
-    Timestamp = X.get(message/date),
+    grok(telegram(X), rdf:type, _),
+    mint(url(S)),
+    !,
+    foreach(grok(telegram(X), P, O),
+            know(S, P, O)).
 
-    number(Id),
-    string(Text),
-    string(Username),
-    number(Timestamp),
-    stamp_date_time(Timestamp, _Date, local),
+item(Dict, Path, Type, Value) :-
+    Value = Dict.get(Path),
+    call(Type, Value).
 
-    writeln(X),
-    
-    once(mint(url(S))),
-    
-    know(S, rdf:type, as:'Note'),
-    know(S, nt:'net/telegramId', Id),
-    know(S, as:content, Text),
-    know(S, as:published, Timestamp),
-    know(S, as:attributedTo, Username).
+grok(telegram(X), rdf:type, as:'Note') :-
+    item(X, message/text, string, _).
+
+grok(telegram(X), nt:telegramId, V) :-
+    item(X, message/message_id, integer, V).
+
+grok(telegram(X), as:content, V) :-
+    item(X, message/text, string, V).
+
+grok(telegram(X), as:published, V) :-
+    item(X, message/date, number, Timestamp),
+    unix_date(Timestamp, V).
+
+grok(telegram(X), as:attributedTo, V) :-
+    item(X, message/from/username, string, V).
 
 grok :-
     known_event(E, _T),
     grok(E).
 
-filter(S, P, _O) :-
-    G = 'http://www.w3.org/ns/activitystreams',
-    rdf(S, P, owl:'ObjectProperty', G).
+unix_date(Unix, Date) :-
+    stamp_date_time(Unix, DateTime, local),
+    DateTime = date(Y, M, D, HH, MM, SS, Offset, _, _),
+    Date = date_time(Y, M, D, HH, MM, SS, Offset).
 
 turtle(Stream, Graph) :-
     rdf_save_turtle(
         stream(Stream),
         [align_prefixes(true),
          comment(false),
-         indent(2),
-         graph(G),
+         indent(4),
+         graph(Graph),
          tab_distance(0)]).
+
+dump(String, Goal) :-
+    mint(url(Subgraph)), !,
+    cleanup(deny(_, _, _, Subgraph)),
+    foreach(call(Goal, Subgraph), true),
+    open_string(String, Stream),
+    cleanup(close(Stream)),
+    turtle(Stream, Subgraph).
 
 dump(default) :-
     turtle(user_output, default).
-
-dump(as) :-
-    mint(url(G)),
-    !,
-    cleanup(deny(_, _, _, G)),
-    foreach(
-        rdf(S, P, O, 'http://www.w3.org/ns/activitystreams'),
-        know(S, P, O, G)
-    ),
-    tmp_file_stream(F, Stream, [extension("ttl")]),
-    cleanup((read_file_to_string(F, X, []), writeln(X))),
-    cleanup(close(Stream)),
-    turtle(Stream, G).
 

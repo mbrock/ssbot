@@ -75,6 +75,8 @@ in {
     
     jq
     ripgrep
+    jless
+    fx
 
     graphviz
     imagemagick

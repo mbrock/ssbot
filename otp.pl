@@ -13,7 +13,9 @@
 
 :- dynamic spin/3.
 
-:- meta_predicate nest(+, 0).
+:- meta_predicate
+       nest(+, 0),
+       spin(+, 0).
 
 nest(Spec, Goal) :-
     cleanup(wipe(Spec)),
@@ -34,8 +36,6 @@ killall(Spec) :-
 
 lose :-
     retractall(spin(_, _, _)).
-
-:- meta_predicate spin(+, 0).
 
 spin(Name, Goal) :-
     term_to_atom(Name, Atom),

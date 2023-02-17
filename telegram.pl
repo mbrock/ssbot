@@ -36,7 +36,7 @@ next_update(Update) :-
     once(api_post(telegram, ["getUpdates"], json(Opts), Result)),
     Result = _{ok: true, result: Updates},
     member(Update, Updates),
-    save_event(telegram(Update)),
+    save_event(recv(telegram, Update)),
     retractall_sequence(Token, _Id),
     assert_sequence(Token, Update.update_id).
 
@@ -50,7 +50,7 @@ start :-
 
 dump :-
     foreach(
-        known_event(telegram(Update), T),
+        known_event(recv(telegram, Update), T),
         print_update(T, Update)
     ).
 
