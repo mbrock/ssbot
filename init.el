@@ -1,6 +1,6 @@
 ;; -*- lexical-binding: t -*-
 
-(set-frame-font "DM Mono-16" nil t)
+;(set-frame-font "DM Mono-16" nil t)
 (setq inhibit-splash-screen t)
 (setq frame-resize-pixelwise t)
 

@@ -45,7 +45,7 @@ let
     ]);
   
   my-swi-prolog =
-    pkgs.swiProlog.overrideAttrs (old:
+    (pkgs.swiProlog.override { withGui = true; }).overrideAttrs (old:
       let version = "9.1.4";
       in {
         inherit version;
@@ -75,6 +75,8 @@ in {
     
     jq
     ripgrep
+    jless
+    fx
 
     graphviz
     imagemagick
@@ -162,6 +164,28 @@ in {
     nodetown-datasette.exec = ''
       datasette --host 0.0.0.0 nodetown_dev.db
     '';
+
+    nodetown-vnc.exec =
+      let
+        width = 1400;
+        height = 900;
+        sizeString = "${toString width}x${toString height}x16";
+      in ''
+       set -ex
+       export DISPLAY=:1
+ 
+       ${pkgs.xvfb-run}/bin/xvfb-run -n 1 -s "-screen 0 ${sizeString}" \
+         ${pkgs.dbus.dbus-launch} --exit-with-session \
+           ${pkgs.openbox}/bin/openbox &
+
+       sleep 3
+       ${pkgs.xterm}/bin/xterm &
+ 
+       ${pkgs.x11vnc}/bin/x11vnc -forever -shared -quiet -display :1 \
+         -noxrecord -xkb -passwd nodetown &
+ 
+       wait
+     '';
   };
 
   enterShell = ''

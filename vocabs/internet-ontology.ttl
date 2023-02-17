@@ -7,117 +7,128 @@
 @prefix schema: <https://schema.org/> .
 @prefix as: <http://www.w3.org/ns/activitystreams#> .
 
-@prefix net: <https://node.town/net/> .
+@prefix nt: <https://node.town/> .
 @prefix code: <https://node.town/code/> .
-@prefix ai: <https://node.town/ai/> .
 
 <https://node.town/> a owl:Ontology ;
   rdfs:comment "Node.Town Internet Ontology 1.0"@en .
 
 ### AI stuff
 
-ai:OpenAI a as:Organization ;
+nt:OpenAI a as:Organization ;
   as:name "OpenAI" .
 
-ai:GPT3 a as:Service ;
+nt:GPT3 a as:Service ;
   as:name "OpenAI GPT-3" ;
-  as:partOf ai:OpenAI .
+  as:partOf nt:OpenAI .
 
-ai:Codex a as:Service ;
+nt:Codex a as:Service ;
   as:name "OpenAI Codex" ;
-  as:partOf ai:OpenAI .
+  as:partOf nt:OpenAI .
 
-ai:Model a as:Object ;
+nt:Model a as:Object ;
   as:name "Model"@en .
 
-ai:GPT3TextDavinci3 a ai:Model ;
+nt:GPT3TextDavinci3 a nt:Model ;
   as:name "text-davinci-003" ;
-  as:partOf ai:GPT3 .
+  as:partOf nt:GPT3 .
 
-ai:GPT3TextCurie1 a ai:Model ;
+nt:GPT3TextCurie1 a nt:Model ;
   as:name "text-curie-001" ;
-  as:partOf ai:GPT3 .
+  as:partOf nt:GPT3 .
 
-ai:GPT3TextBabbage1 a ai:Model ;
+nt:GPT3TextBabbage1 a nt:Model ;
   as:name "text-babbage-001" ;
-  as:partOf ai:GPT3 .
+  as:partOf nt:GPT3 .
 
-ai:GPT3TextAda1 a ai:Model ;
+nt:GPT3TextAda1 a nt:Model ;
   as:name "text-ada-001" ;
-  as:partOf ai:GPT3 .
+  as:partOf nt:GPT3 .
 
-ai:GPT3CodeDavinci2 a ai:Model ;
+nt:GPT3CodeDavinci2 a nt:Model ;
   as:name "code-davinci-002" ;
-  as:partOf ai:Codex .
+  as:partOf nt:Codex .
 
-ai:GPT3CodeCushman2 a ai:Model ;
+nt:GPT3CodeCushman2 a nt:Model ;
   as:name "code-cushman-002" ;
-  as:partOf ai:Codex .
+  as:partOf nt:Codex .
 
-ai:Inference a owl:Class ;
+nt:Inference a owl:Class ;
   rdfs:subClassOf as:Object .
 
-ai:TextCompletion a owl:Class ;
-  rdfs:subClassOf ai:Inference .
+nt:TextCompletion a owl:Class ;
+  rdfs:subClassOf nt:Inference .
 
-ai:Embedding a owl:Class ;
-  rdfs:subClassOf ai:Inference .
+nt:Embedding a owl:Class ;
+  rdfs:subClassOf nt:Inference .
 
-ai:input a owl:FunctionalProperty, owl:DatatypeProperty ;
-  rdfs:domain ai:Inference ;
+nt:input a owl:FunctionalProperty, owl:DatatypeProperty ;
+  rdfs:domain nt:Inference ;
   rdfs:range xsd:string .
 
-ai:output a owl:FunctionalProperty, owl:DatatypeProperty ;
-  rdfs:domain ai:Inference ;
+nt:output a owl:FunctionalProperty, owl:DatatypeProperty ;
+  rdfs:domain nt:Inference ;
   rdfs:range xsd:string .
 
-ai:model a owl:FunctionalProperty, owl:ObjectProperty ;
-  rdfs:domain ai:Inference ;
-  rdfs:range ai:Model .
+nt:model a owl:FunctionalProperty, owl:ObjectProperty ;
+  rdfs:domain nt:Inference ;
+  rdfs:range nt:Model .
 
 ### Conversation agents
 
-ai:chatContext a owl:DatatypeProperty ;
+nt:chatContext a owl:DatatypeProperty ;
   rdfs:domain as:Note ;
   rdfs:range xsd:string .
 
-ai:NodeTown a as:Service ;
+nt:NodeTown a as:Service ;
   as:name "Node.Town" ;
   as:url <https://node.town> .
 
-ai:Classify a as:Service .
-
-ai:Weather a as:Service .
-
-ai:EInk a as:Service .
-
-ai:Scrape a as:Service .
+nt:Classify a as:Service .
+nt:Weather a as:Service .
+nt:EInk a as:Service .
+nt:Scrape a as:Service .
 
 ### Messenger stuff
 
-net:originPlatform a owl:ObjectProperty ;
+nt:platform a owl:ObjectProperty ;
+  rdfs:label "platform" ;
   rdfs:domain as:Object ;
   rdfs:range as:Object .
 
-net:Telegram a as:Service ;
+nt:Telegram a as:Service ;
+  rdfs:label "Telegram" ;
   as:name "Telegram"@en ;
   as:url <https://telegram.org> .
 
-net:telegramId a owl:DatatypeProperty ;
+nt:Discord a as:Service ;
+  rdfs:label "Discord" ;
+  as:name "Discord"@en ;
+  as:url <https://discord.com> .
+
+nt:idScope a owl:ObjectProperty ;
+  rdfs:domain owl:Property ;
+  rdfs:range as:Service .
+
+nt:telegramId a owl:DatatypeProperty ;
+  nt:idScope nt:Telegram ;
+  rdfs:label "telegramId" ;
   rdfs:domain as:Object ;
   rdfs:range xsd:integer .
 
-net:telegramData a owl:DatatypeProperty ;
+nt:discordId a owl:DatatypeProperty ;
+  nt:idScope nt:Discord ;
+  rdfs:label "discordId" ;
   rdfs:domain as:Object ;
-  rdfs:range xsd:string .
+  rdfs:range xsd:integer .
 
-net:jsonPayload a owl:DatatypeProperty ;
+nt:jsonPayload a owl:DatatypeProperty ;
   rdfs:domain as:Update ;
   rdfs:range xsd:string .
 
-net:Readwise a as:Service .
+nt:Readwise a as:Service .
 
-net:highlights a owl:ObjectProperty ;
+nt:highlights a owl:ObjectProperty ;
   rdfs:domain schema:CreativeWork ;
   rdfs:range schema:Quotation .
 
