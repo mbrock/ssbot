@@ -1,6 +1,6 @@
 :- module(nt,
           [ serve/0,
-            graph/1
+            graph/2
           ]).
 
 :- use_module(base).
