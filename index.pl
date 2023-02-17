@@ -14,25 +14,20 @@
 :- use_module(library(http/html_write)).
 :- use_module(library(http/json)).
 
-% demo(html, URL) :-
-%     http_open(URL, Stream, []),
-%     call_cleanup(
-%         load_html(Stream, DOM, []),
-%         close(Stream)),
-%     html_text(DOM, [width(500)]).
+:- use_module(library(arouter)).
+
+:- route_get(/, index(html)).
+:- route_get('graph.ttl', index(ttl)).
 
 serve :-
-    http_server(http_dispatch, [port(4000)]).
+    http_server(route, [port(4000)]).
 
-:- http_handler(root(.), index(html), []).
-:- http_handler(root(index.ttl), index(ttl), []).
-
-index(html, Request) :-
+index(html) :-
     reply_html_page(
         [ title('node.town'),
           link([rel(stylesheet),
                 href('https://font.node.town/index.css')]),
-          style(['body { font-family: "Berkeley Mono", monospace; }',
+          style(['body { font-family: "helvetica", monospace; }',
                  "article { border: 1px solid #ccc; padding: .5em; }",
                  "article > h2 { margin: 0; margin-bottom: 0.5em; }",
                  "h1, h2 { font-size: inherit; }",
@@ -43,11 +38,8 @@ index(html, Request) :-
         [h1('node.town inspector'),
          \graph_view]).
 
-index(ttl, Request) :-
-    reply_turtle.
-
-reply_turtle :-
-    format('Content-type: text/turtle~n~n'),
+index(ttl) :-
+    format('content-type: text/turtle~n~n'),
     turtle(current_output, default).
 
 description(Subject, Pairs) :-

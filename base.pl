@@ -8,7 +8,8 @@
             deny/4,
             dump/2,
             deny/0,
-            turtle/2
+            turtle/2,
+            sync/1
           ]).
 
 :- use_module(library(semweb/rdf11)).
@@ -17,7 +18,7 @@
 :- use_module(library(semweb/rdf_library)).
 :- use_module(library(semweb/rdf_portray), []).
 :- use_module(library(semweb/turtle)).
-
+:- use_module(library(semweb/rdf_http_plugin)).
 :- use_module(library(persistency)).
 :- use_module(library(sweet)).
 :- use_module(library(yall)).
@@ -35,11 +36,14 @@
        nodetown("vocabs/void.ttl")).
 
 :- rdf_load_library(activitystreams).
-:- rdf_load_library(nodetown).
+:- rdf_load_library(internet).
 :- rdf_load_library(rdf).
 :- rdf_load_library(rdfs).
 :- rdf_load_library(owl).
 :- rdf_load_library(dc).
+
+sync(X) :-
+    rdf_load_library(X).
 
 :- persistent
        known_event(data:any, time:float).

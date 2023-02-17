@@ -16,17 +16,24 @@
   vann:preferredNamespaceUri "https://node.town/"
 ] .
 
-<activitystreams>
-  a void:Dataset ;
+<activitystreams> a void:Dataset ;
   dc:title "Activity Streams 2.0"@en ;
   lib:source as: ;
   void:dataDump <activitystreams-owl.ttl> .
 
-<nodetown>
-  a void:Dataset ;
-  dc:title "Node.Town" ;
-  lib:source <https://node.town/>  ;
+<internet> a void:Dataset ;
+  dc:title "Internet Ontology Very Good 2.0" ;
   void:dataDump <internet-ontology.ttl> .
+
+<hamlet> a void:Dataset ;
+  dc:title "Node.Town: Megastar RDF Nexus 3.0" ;
+  lib:source <https://node.town/graph> ;
+  void:dataDump <http://hamlet:4000/graph.ttl> .
+
+<yacht> a void:Dataset ;
+  dc:title "Node.Town: Riga Big Mac" ;
+  lib:source <https://node.town/graph> ;
+  void:dataDump <http://yacht:4000/graph.ttl> .
 
 <rdfs> a void:Dataset ;
   dc:title "RDF Schema" ;
