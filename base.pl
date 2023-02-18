@@ -28,7 +28,8 @@
    asserta(user:file_search_path(nodetown, Dir)).
 
 :- rdf_attach_db(
-       user_app_data("nodetown.rdf.db"), []).
+       user_app_data("nodetown.rdf.db"),
+       [access(read_write)]).
 
 :- rdf_attach_library(
        nodetown("vocabs/void.ttl")).

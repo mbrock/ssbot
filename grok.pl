@@ -3,6 +3,7 @@
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
 :- use_module(library(persistency)).
+:- use_module(library(http/json)).
 :- use_module(base, [mint/1, know/3]).
 :- persistent known_event(data:any, time:float).
 :- db_attach("events.db", []).
@@ -93,6 +94,11 @@ grok(recv(telegram, X), as:published, V) :-
 grok(recv(telegram, X), as:attributedTo, V) :-
     item(X, message/from/username, string, V).
 
+grok(recv(_, X), nt:jsonPayload, V) :-
+    with_output_to(
+        string(V),
+        json_write_dict(current_output, X, [width(80)])).
+    
 grok(recv(discord, _), nt:platform, nt:'Discord').
 
 grok(recv(discord, X), rdf:type, as:'Note') :-

@@ -112,17 +112,18 @@ nt:idScope a owl:ObjectProperty ;
 
 nt:telegramId a owl:DatatypeProperty ;
   nt:idScope nt:Telegram ;
-  rdfs:label "telegramId" ;
+  rdfs:label "Telegram ID" ;
   rdfs:domain as:Object ;
   rdfs:range xsd:integer .
 
 nt:discordId a owl:DatatypeProperty ;
   nt:idScope nt:Discord ;
-  rdfs:label "discordId" ;
+  rdfs:label "Discord ID" ;
   rdfs:domain as:Object ;
   rdfs:range xsd:integer .
 
 nt:jsonPayload a owl:DatatypeProperty ;
+  rdfs:label "JSON Payload" ;
   rdfs:domain as:Update ;
   rdfs:range xsd:string .
 

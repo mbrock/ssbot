@@ -22,10 +22,6 @@
 :- use_module(library(http/json)).
 :- use_module(library(http/http_dispatch)).
 
-:- use_module(library(semweb/turtle)).
-:- use_module(library(semweb/rdf_http_plugin)).
-:- use_module(library(http/http_ssl_plugin)).
-
 :- use_module(library(pengines)).
 
 :- http_handler(root(.), graph(html), []).
@@ -87,7 +83,7 @@ graph_view -->
 
 properties([]) --> [].
 properties([P-O|T]) -->
-        html(tr([td([style("text-align: right; vertical-align: top; padding-right: 0.5em")], \show(P)),
+        html(tr([td([style("text-align: right; vertical-align: top; padding-right: 0.5em; white-space: nowrap")], \show(P)),
                  td([style("vertical-align: top")], \show(O))])),
         properties(T).
 
