@@ -1,10 +1,10 @@
 :- module(discord,
-          [ discord_session/2,
+          [ discord_session/1,
             discord/0
           ]).
 
 :- use_module(secrets).
-:- use_module(base).
+:- use_module(grok, [hear/1]).
 :- use_module(apis).
 :- use_module(otp).
 
@@ -25,7 +25,7 @@ discord_sequence(null).
 
 discord :-
     all_intents(Intents),
-    discord_session(1, Intents).
+    discord_session(Intents).
 
 intent(guilds).
 intent(guild_messages).
@@ -33,16 +33,16 @@ intent(guild_message_reactions).
 intent(direct_messages).
 intent(direct_message_reactions).
 
-discord_session(Id, Intents) :-
+discord_session(Intents) :-
     discord_connect(Socket, Pulse),
 
-    spin(discord(Id, pulse),
+    spin(discord_pulse,
          discord_heartbeat_loop(Socket, Pulse)),
 
     once(discord_identify(Socket, Intents)),
     once(discord_receive(Socket, _Ready)),
 
-    spin(discord(Id, receive),
+    spin(discord_receive,
          discord_receive_loop(Socket)),
 
     writeln(waiting).
@@ -64,7 +64,7 @@ discord_gateway_url(URL) :-
 discord_receive(Socket, Message) :-
     ws_receive(Socket, Payload, [format(json)]),
     Message = Payload.data,
-    save_event(recv(discord, Message)),
+    hear(recv(discord, Message)),
     discord_opcode(Message.op, Op),
     (  Op = dispatch
     -> retractall(discord_sequence(_)),
@@ -91,7 +91,7 @@ discord_heartbeat_loop(Socket, Interval) :-
 
 discord_gateway_send(Socket, Message) :-
     ws_send(Socket, json(Message)),
-    save_event(send(discord, Message)).
+    hear(send(discord, Message)).
 
 discord_gateway_send(Socket, Op, Data) :-
     once(discord_opcode(Opcode, Op)),
@@ -110,7 +110,7 @@ discord_identify(Socket, Intents) :-
 
 discord_gateway_close(Socket) :-
     ws_close(Socket, 1000, "Goodbye"),
-    save_event(close(discord)).
+    hear(close(discord)).
 
 discord_opcode(0, dispatch).
 discord_opcode(1, heartbeat).
@@ -143,4 +143,8 @@ discord_intent_bitmask(Intents, Bitmask) :-
                 discord_intents(X, I)), Bits),
     sum_list(Bits, Bitmask).
 
+grok:dull(heartbeat, send(discord, X)) :-
+    discord_opcode(X.op, heartbeat).
 
+grok:dull(heartbeat, recv(discord, X)) :-
+    discord_opcode(X.op, heartbeat_ack).

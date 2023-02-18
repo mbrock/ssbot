@@ -1,11 +1,18 @@
 :- module(nt,
-          [ serve/0,
-            graph/2
+          [ graph/2,
+            site/0,
+            dial/0
           ]).
 
+:- use_module(otp).
 :- use_module(base).
+:- use_module(grok).
+:- use_module(hack).
+:- use_module(openai).
 :- use_module(discord).
 :- use_module(telegram).
+
+:- debug(spin).
 
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -24,7 +31,11 @@
 :- http_handler(root(.), graph(html), []).
 :- http_handler(root(graph), graph(ttl), []).
 
-serve :-
+dial :-
+    discord,
+    telegram.
+
+site :-
     graph_url(G),
     format("%% nt: using graph ~w~n", [G]),
     rdf_create_graph(G),

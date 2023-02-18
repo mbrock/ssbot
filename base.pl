@@ -1,16 +1,14 @@
-:- module(nt_base,
-          [ known_event/2
-          , save_event/1,
-            know/3,
+:- module(base,
+          [ know/3,
             deny/3,
-            grok/0,
             dump/1,
             deny/4,
             dump/2,
             deny/0,
             turtle/2,
             sync/1,
-            graph_url/1
+            graph_url/1,
+            mint/1
           ]).
 
 :- use_module(library(semweb/rdf11)).
@@ -21,9 +19,7 @@
 :- use_module(library(semweb/turtle)).
 :- use_module(library(semweb/rdf_http_plugin)).
 :- use_module(library(http/http_ssl_plugin)).
-:- use_module(library(persistency)).
 :- use_module(library(sweet)).
-:- use_module(library(yall)).
 
 :- dynamic user:file_search_path/2.
 :- multifile user:file_search_path/2.
@@ -50,31 +46,12 @@ sync(X) :-
     format(atom(S), "http://~w:4000/graph", [X]),
     rdf_load(S, [graph('https://node.town/graph')]).
 
-:- persistent
-       known_event(data:any, time:float).
-
-:- db_attach("events.db", []).
-
-save_event(X) :-
-    get_time(Now),
-    assert_known_event(X, Now),
-    debug(event, "~p", [X]),
-    ignore(grok(X)).
-
-migrate :-
-    known_event(E, T),
-    E = receive(websocket, discord, X),
-    writeln(E),
-    retract_known_event(E, T),
-    assert_known_event(recv(discord, X), T).
-
 :- rdf_meta
        spew(r, r, o),
        know(r, r, o),
        know(r, r, o, +),
        deny(r, r, o),
-       deny(r, r, o, +),
-       grok(+, r, o).
+       deny(r, r, o, +).
 
 spew(S, P, O) :-
     ansi_format([bold], "~w", [S]),
@@ -127,84 +104,6 @@ mint(key(T, X)) :-
     char_type(First, prolog_atom_start),
     !,
     atom_codes(X, Chars).
-
-id_scope_relation(Relation, Service) :-
-    rdf(Relation, nt:idScope, Service).
-
-scoped_id(X, ID, Graph, URL) :-
-    id_scope_relation(Relation, _Service),
-    grok(X, Relation, ID),
-    rdf(URL, Relation, ID, Graph).
-
-link(X, URL) :-
-    (   scoped_id(X, ID, Graph, URL), !,
-        format("Linking ~w (~w) [~w]~n", [URL, ID, Graph])
-    ->  true
-    ;   mint(url(URL))
-    ,   format("Minting ~w~n", [URL])
-    ).
-
-grok(X) :-
-    grok(X, rdf:type, _),
-    link(X, S), !,
-    foreach(grok(X, P, O),
-            (know(S, P, O))),
-    format("linked ~w to ~w~n~n", [X, S]).
-
-grok(X) :-
-    \+ grok(X, rdf:type, _),
-    format("ignoring ~w~n", [X]).
-
-item(Dict, Path, Type, Value) :-
-    is_dict(Dict),
-    Value = Dict.get(Path),
-    call(Type, Value).
-
-grok(recv(telegram, _), nt:platform, nt:'Telegram').
-
-grok(recv(telegram, X), rdf:type, as:'Note') :-
-    item(X, message/text, string, _).
-
-grok(recv(telegram, X), nt:telegramId, V) :-
-    item(X, message/message_id, integer, V).
-
-grok(recv(telegram, X), as:content, V) :-
-    item(X, message/text, string, V).
-
-grok(recv(telegram, X), as:published, V) :-
-    item(X, message/date, number, Timestamp),
-    unix_date(Timestamp, V).
-
-grok(recv(telegram, X), as:attributedTo, V) :-
-    item(X, message/from/username, string, V).
-
-grok(recv(discord, _), nt:platform, nt:'Discord').
-
-grok(recv(discord, X), rdf:type, as:'Note') :-
-    item(X, t, string, "MESSAGE_CREATE").
-
-grok(recv(discord, X), nt:discordId, V) :-
-    item(X, d/id, string, V).
-
-grok(recv(discord, X), as:content, O) :-
-    item(X, d/content, string, O).
-
-grok(recv(discord, X), as:published, O) :-
-    item(X, d/timestamp, string, O).
-
-grok(recv(discord, X), as:attributedTo, O) :-
-    item(X, d/author/username, string, O).
-
-grok :-
-    known_event(E, _T),
-    E = recv(_, _),
-    grok(E, rdf:type, _),
-    grok(E).
-
-unix_date(Unix, Date) :-
-    stamp_date_time(Unix, DateTime, local),
-    DateTime = date(Y, M, D, HH, MM, SS, Offset, _, _),
-    Date = date_time(Y, M, D, HH, MM, SS, Offset).
 
 turtle(Stream, Graph) :-
     rdf_save_turtle(

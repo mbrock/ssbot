@@ -13,6 +13,7 @@
           , ask/1
           ]).
 
+:- use_module(base).
 :- use_module(apis).
 
 :- use_module(library(persistency)).

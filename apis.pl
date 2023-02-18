@@ -1,10 +1,10 @@
-:- module(nt_apis,
+:- module(apis,
           [ api_post/4
           , api_post/3
           , api_get/4
           ]).
 
-:- use_module(base).
+:- use_module(grok, [hear/1]).
 :- use_module(secrets).
 
 :- use_module(library(http/http_client)).
@@ -50,7 +50,7 @@ api_post(Service, PathComponents, Body, Result) :-
               [request_header('Authorization'=Auth),
                request_header('User-Agent'=UserAgent),
                json_object(dict)]),
-    save_event(post(Service, PathComponents, Body)).
+    hear(post(Service, PathComponents, Body)).
 
 api_post(Service, PathComponents, Result) :-
     api_post(Service, PathComponents, json(_{}), Result).

@@ -3,14 +3,14 @@
           , save_readwise_embeddings/0
           ]).
 
-:- use_module(base).
+:- use_module(grok, [hear/1]).
 :- use_module(apis).
 :- use_module(openai).
 
 :- debug(http(readwise)).
 
 save_readwise_event(Item) :-
-    save_event(readwise(Item)).
+    hear(readwise(Item)).
 
 readwise_export(start, Items, NextCursor) :-
     api_get(readwise, ["export"], [], Export),
