@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-set -ex
-
-docker run -it --name qdrant \
-  -p 0.0.0.0:6333:6333 \
-  -v $(pwd)/data/qdrant:/qdrant/storage \
-  qdrant/qdrant
