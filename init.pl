@@ -1,0 +1,3 @@
+consult(index).
+module(nt).
+

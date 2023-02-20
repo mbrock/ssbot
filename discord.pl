@@ -36,16 +36,16 @@ intent(direct_message_reactions).
 discord_session(Intents) :-
     discord_connect(Socket, Pulse),
 
-    spin(discord_pulse,
+    spin(discord(pulse),
          discord_heartbeat_loop(Socket, Pulse)),
 
     once(discord_identify(Socket, Intents)),
     once(discord_receive(Socket, _Ready)),
 
-    spin(discord_receive,
+    spin(discord(receive),
          discord_receive_loop(Socket)),
 
-    writeln(waiting).
+    wipe(discord(_)).
 
 all_intents(Intents) :-
     findall(I, intent(I), Intents).
@@ -143,8 +143,7 @@ discord_intent_bitmask(Intents, Bitmask) :-
                 discord_intents(X, I)), Bits),
     sum_list(Bits, Bitmask).
 
-grok:dull(heartbeat, send(discord, X)) :-
-    discord_opcode(X.op, heartbeat).
+grok:dull(send(discord, X)) :- discord_opcode(X.op, heartbeat).
+grok:dull(recv(discord, X)) :- discord_opcode(X.op, heartbeat_ack).
 
-grok:dull(heartbeat, recv(discord, X)) :-
-    discord_opcode(X.op, heartbeat_ack).
+

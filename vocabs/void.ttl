@@ -7,24 +7,32 @@
 @prefix     xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix      dc: <http://purl.org/dc/terms/> .
 @prefix      as: <http://www.w3.org/ns/activitystreams#> .
+@prefix ontolex: <http://www.w3.org/ns/lemon/ontolex#> .
+@prefix      wn: <http://wordnet-rdf.princeton.edu/> .
 
-@prefix	  yacht: <http://yacht:4000/>.
-@prefix	 hamlet: <http://hamlet:4000/>.
-@prefix      nt: <https://node.town/>.
+@prefix	  yacht: <http://yacht:4000/> .
+@prefix	 hamlet: <http://hamlet:4000/> .
+@prefix      nt: <https://node.town/> .
 
-[ vann:preferredNamespacePrefix "as" ;
-  vann:preferredNamespaceUri "http://www.w3.org/ns/activitystreams#"
-] .
+[ a lib:Namespace ;
+  lib:mnemonic "wn" ;
+  lib:namespace wn: ] .
 
-[ vann:preferredNamespacePrefix "nt" ;
-  vann:preferredNamespaceUri "https://node.town/"
-] .
+[ a lib:Namespace ;
+  lib:mnemonic "as" ;
+  lib:namespace as: ] .
 
-[ vann:preferredNamespacePrefix "hamlet" ;
-  vann:preferredNamespaceUri "http://hamlet:4000/" ].
+[ a lib:Namespace ;
+  lib:mnemonic "nt" ;
+  lib:namespace nt: ] .
+  
+[ a lib:Namespace ;
+  lib:mnemonic "yacht" ;
+  lib:namespace yacht: ] .
 
-[ vann:preferredNamespacePrefix "yacht" ;
-  vann:preferredNamespaceUri "http://yacht:4000/" ].
+[ a lib:Namespace ;
+  lib:mnemonic "hamlet" ;
+  lib:namespace hamlet: ] .
 
 <activitystreams> a void:Dataset ;
   dc:title "Activity Streams 2.0"@en ;
@@ -58,3 +66,10 @@
   dc:title "Dublin Core" ;
   lib:source dc: ;
   void:dataDump <dc.ttl> .
+
+<wordnet> a void:Dataset ;
+  dc:title "WordNet" ;
+  void:dataDump <wordnet.nt.gz> ;
+  void:dataDump <wordnet-ontology.xml> .
+
+

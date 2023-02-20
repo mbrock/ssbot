@@ -27,9 +27,27 @@
 :- http_handler(root(.), graph(html), []).
 :- http_handler(root(graph), graph(ttl), []).
 
+info(X) :-
+    print_message(informational, X).
+
+moan(X) :-
+    print_message(error, X).
+
+dote(Goal) :-
+    info(dote(Goal, work)),
+    catch(
+        call(Goal),
+        E,
+        (moan(dote(Goal, fail(E))),
+         Seconds = 3,
+         info(dote(Goal, wait(Seconds))),
+         sleep(Seconds),
+         dote(Goal))),
+    info(dote(Goal, done)).
+
 dial :-
-    discord,
-    telegram.
+    spin(discord, dote(discord)),
+    spin(telegram, dote(telegram)).
 
 site :-
     graph_url(G),

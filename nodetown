@@ -1,2 +1,4 @@
 #!/bin/sh
 set -ex
+tmux new-session -s prolog \
+  swipl --pldoc=5000 index.pl

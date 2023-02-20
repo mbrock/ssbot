@@ -36,13 +36,10 @@ bump(Token, Updates) :-
     assert_sequence(Token, Next),
     debug(telegram, "Next: ~w~n", [Next]).
 
-loop :-
+telegram :-
     debug(telegram, "Polling...", []),
     foreach(next, true),
-    loop.
-
-telegram :-
-    spin(telegram_poll, loop).
+    telegram.
 
 dump :-
     foreach(
@@ -63,4 +60,5 @@ print_update(T, Update) :-
     ansi_format([fg(green)], "~w", [Name]),
     ansi_format([faint], ": ", []),
     ansi_format([fg(blue)], "~w~n~n", [Text]).
+
 

@@ -76,20 +76,18 @@ in {
     no-mac my-swi-prolog
   ) ++ [
     devtools.restless-git
-
-    screen
-    # inotify-tools
-
-    jq
-    ripgrep
-    jless
+    
+#    flyctl
     fx
-
+    git
     graphviz
     imagemagick
-
-    git
+    jless
+    jq
+    ripgrep
+    screen
     sqlite
+
 #    datasette
 #    litestream
 #    pandoc

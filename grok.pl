@@ -1,5 +1,6 @@
-:- module(grok, [hear/1, past/2, grok/0, frob/2,frob/0
-                ]).
+:- module(grok,
+          [hear/1, past/2, grok/0, frob/2, frob/0, dull/1
+          ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
 :- use_module(library(persistency)).
@@ -7,6 +8,8 @@
 :- use_module(base, [mint/1, know/3]).
 :- persistent known_event(data:any, time:float).
 :- db_attach("events.db", []).
+
+self(nt:me).
 
 past(X, T) :- known_event(X, T).
 
@@ -56,6 +59,28 @@ link(X, URL) :-
     ,   format("Minting ~w~n", [URL])
     ).
 
+find(S, P, O) :-
+    (  rdf(S, P, O)
+    -> true
+    ;  mint(url(S)),
+       know(S, P, O)
+    ).
+
+item(Dict, Path, Type, Value) :-
+    is_dict(Dict),
+    Value = Dict.get(Path),
+    call(Type, Value).
+
+json(X, Data) :-
+    with_output_to(
+        string(String),
+        json_write_dict(current_output, Data, [width(80)])),
+    know(X, nt:jsonPayload, String).
+
+:- multifile dull/1.
+
+dull(post(telegram, ["getUpdates"], _)).
+
 :- rdf_meta grok(+, r, o).
 
 grok(X) :-
@@ -67,14 +92,9 @@ grok(X) :-
 
 grok(X) :-
     \+ grok(X, rdf:type, _),
-    (   dull(Tag, X)
-    ->  debug(grok, "dull ~w", [Tag])
+    (   dull(X)
+    ->  true
     ;   format("No type for ~w~n", [X])).
-
-item(Dict, Path, Type, Value) :-
-    is_dict(Dict),
-    Value = Dict.get(Path),
-    call(Type, Value).
 
 grok(recv(telegram, _), nt:platform, nt:'Telegram').
 
@@ -92,8 +112,28 @@ grok(recv(telegram, X), as:published, V) :-
     unix_date(Timestamp, V).
 
 grok(recv(telegram, X), as:attributedTo, V) :-
-    item(X, message/from/username, string, V).
+    item(X, message/from/id, integer, ID),
+    item(X, message/from, is_dict, From),
+    find(V, nt:telegramId, ID),
+    json(V, From).
 
+grok(recv(telegram, X), as:inReplyTo, V) :-
+    item(X, message/reply_to_message/message_id, integer, V).
+
+grok(recv(telegram, X), as:audience, nt:me) :-
+    item(X, message/chat/type, string, "private").
+
+grok(recv(telegram, X), as:audience, Group) :-
+    item(X, message/chat/type, string, "group"),
+    item(X, message/chat/id, integer, ChatID),
+    item(X, message/chat, is_dict, ChatData),
+    
+    find(Group, nt:telegramId, ChatID),
+    json(Group, ChatData),
+
+    know(Group, nt:platform, nt:'Telegram'),
+    know(Group, rdf:type, as:'Group').
+    
 grok(recv(_, X), nt:jsonPayload, V) :-
     with_output_to(
         string(V),
@@ -126,4 +166,12 @@ unix_date(Unix, Date) :-
     stamp_date_time(Unix, DateTime, local),
     DateTime = date(Y, M, D, HH, MM, SS, Offset, _, _),
     Date = date_time(Y, M, D, HH, MM, SS, Offset).
+
+cope(X) :-
+    rdf(X, rdf:type, as:'Note'),
+    rdf(X, as:audience, Audience),
+    rdf(X, as:published, Published),
+    rdf(X, as:content, Content),
+    rdf(X, as:attributedTo, Author),
+    format("~w ~w ~w ~w~n", [Audience, Published, Author, Content]).
 

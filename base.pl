@@ -17,7 +17,9 @@
 :- use_module(library(semweb/rdf_library)).
 :- use_module(library(semweb/rdf_portray), []).
 :- use_module(library(semweb/turtle)).
+:- use_module(library(semweb/rdf_ntriples), []).
 :- use_module(library(semweb/rdf_http_plugin)).
+:- use_module(library(semweb/rdf_zlib_plugin)).
 :- use_module(library(http/http_ssl_plugin)).
 :- use_module(library(sweet)).
 
@@ -33,7 +35,6 @@
 
 :- rdf_attach_library(
        nodetown("vocabs/void.ttl")).
-
 :- rdf_load_library(activitystreams).
 :- rdf_load_library(internet).
 :- rdf_load_library(rdf).
