@@ -46,10 +46,10 @@ api_post(Service, PathComponents, Body, Result) :-
     once(api_auth(Service, Auth)),
     api_url(Service, Path, URL),
     user_agent(Service, UserAgent),
-    http_post(URL, Body, Result,
-              [request_header('Authorization'=Auth),
-               request_header('User-Agent'=UserAgent),
-               json_object(dict)]),
+    once(http_post(URL, Body, Result,
+                   [request_header('Authorization'=Auth),
+                    request_header('User-Agent'=UserAgent),
+                    json_object(dict)])),
     hear(post(Service, PathComponents, Body)).
 
 api_post(Service, PathComponents, Result) :-

@@ -1,11 +1,14 @@
 :- module(grok,
-          [hear/1, past/2, grok/0, frob/2, frob/0, dull/1
+          [hear/1, past/2, grok/0, frob/2, frob/0, dull/1,
+           cope/1
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
 :- use_module(library(persistency)).
 :- use_module(library(http/json)).
+:- use_module(openai, [completion/3]).
 :- use_module(base, [mint/1, know/3]).
+:- use_module(otp, [spin/2]).
 :- persistent known_event(data:any, time:float).
 :- db_attach("events.db", []).
 
@@ -169,9 +172,35 @@ unix_date(Unix, Date) :-
 
 cope(X) :-
     rdf(X, rdf:type, as:'Note'),
-    rdf(X, as:audience, Audience),
-    rdf(X, as:published, Published),
-    rdf(X, as:content, Content),
-    rdf(X, as:attributedTo, Author),
-    format("~w ~w ~w ~w~n", [Audience, Published, Author, Content]).
+    rdf(X, as:audience, nt:me),
+    find(Response, as:inReplyTo, X),
+    know(Response, rdf:type, as:'Note'),
+    know(Response, as:generator, nt:openai),
+    gpt3(Response).
 
+cope(X) :-
+    rdf(X, rdf:type, as:'Note'),
+    rdf(X, as:generator, nt:openai),
+    \+ rdf(X, as:content, _).
+
+gpt3(X) :-
+    rdf(X, as:inReplyTo, InReplyTo),
+    rdf(InReplyTo, as:content, Content^^xsd:string),
+    completion(
+        Content,
+        _{max_tokens: 500, temperature: 0.8},
+        Response),
+    item(Response, text, string, Text),
+    know(X, as:content, Text^^xsd:string),
+    respond(X).
+
+respond(X) :-
+    rdf(X, as:content, Content^^xsd:string),
+    rdf(X, as:inReplyTo, InReplyTo),
+    rdf(InReplyTo, nt:telegramId, TelegramID^^xsd:integer),
+    apis:api_post(
+        telegram,
+        ["sendMessage"],
+        json(_{chat_id: TelegramID, text: Content}),
+        Result),
+    json(X, Result).
