@@ -196,6 +196,8 @@
 
 (global-set-key (kbd "C-c .") 'xref-find-definitions)
 
+(global-set-key (kbd "C-c q") 'fill-paragraph)
+
 (progn
   (load-file "./vendor/copilot-emacs/copilot.el")
 
@@ -215,3 +217,6 @@
 (require 'sweeprolog)
 
 (add-to-list 'auto-mode-alist '("\\.pl\\'" . sweeprolog-mode))
+
+(load-file "./vendor/ttl-mode/ttl-mode.el")
+(add-to-list 'auto-mode-alist '("\\.ttl\\'" . ttl-mode))

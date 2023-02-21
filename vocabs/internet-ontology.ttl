@@ -3,6 +3,12 @@
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
+@prefix cnt: <http://www.w3.org/2011/content#> .
+@prefix http: <http://www.w3.org/2011/http#> .
+@prefix httpm: <http://www.w3.org/2011/http-methods#> .
+@prefix httph: <http://www.w3.org/2011/http-headers#> .
+@prefix httpc: <http://www.w3.org/2011/http-statusCodes#> .
+
 @prefix bfo: <http://purl.obolibrary.org/bfo/bfo.owl#> .
 @prefix schema: <https://schema.org/> .
 @prefix as: <http://www.w3.org/ns/activitystreams#> .
@@ -10,28 +16,97 @@
 @prefix nt: <https://node.town/> .
 @prefix code: <https://node.town/code/> .
 
-<https://node.town/> a owl:Ontology ;
-  rdfs:comment "Node.Town Internet Ontology 1.0"@en .
+nt: a owl:Ontology ;
+    rdfs:label "Node.Town Internet Ontology"@en ;
+    rdfs:comment "The Node.Town Internet Ontology is a collection of terms and classes that are used to describe the so-called Internet, as well as the various protocols, services, and applications that run on it."@en ;
+    .
 
-nt:API a owl:Class ; rdfs:label "API" ; rdfs:subClassOf as:Service .
-nt:GenerativeModel a owl:Class ; as:name "Generative Model"@en .
+#
+# Section 1. APIs, HTTP, requests, responses, etc.
+#
 
-nt:openai a as:Organization ; as:name "OpenAI" .
-nt:gpt3   a nt:API          ; as:name "GPT-3 API" ;
-  as:attributedTo nt:openai ;
-        as:summary "GPT-3 is a language model developed by OpenAI. It is the successor to GPT-2, and is the third in the GPT series of language models. GPT-3 is a large transformer-based language model with 175 billion parameters, trained on a dataset of 45 GB of text. It is capable of generating coherent paragraphs of text on a wide range of topics, and can perform a variety of language tasks such as translation, summarization, and question answering. It is also capable of performing rudimentary mathematical calculations and solving simple puzzles."@en ;
+http:Message rdfs:subClassOf as:Activity .
 
-nt:text_davinci_003  a nt:GenerativeModel .
-nt:text_curie_001    a nt:GenerativeModel .
-nt:text_babbage_001  a nt:GenerativeModel .
-nt:code_davinci_002  a nt:GenerativeModel .
-nt:code_cushman_002  a nt:GenerativeModel .
+
+#
+# Section 2. Software, systems, code, modules, etc.
+#
+
+code:CodeUnit a owl:Class ;
+    rdfs:subClassOf schema:SoftwareSourceCode ;
+    rdfs:label "code unit" ;
+    rdfs:comment "A code unit is a unit of code that is used to implement a software system."@en ;
+    .
+
+code:File a owl:Class ;
+    rdfs:label "file" ;
+    rdfs:subClassOf code:CodeUnit ;
+    rdfs:comment "A file is a code unit contained within a file system."@en ;
+    .
+
+code:Repository a owl:Class ;
+    rdfs:label "repository" ;
+    rdfs:subClassOf code:CodeUnit ;
+    rdfs:comment "A repository is a collection of code, data, or other content that is tracked by a version control system."@en ;
+    .
+
+code:Module a owl:Class ;
+    rdfs:label "module" ;
+    rdfs:subClassOf code:CodeUnit ;
+    rdfs:comment "A module is a code unit that bundles a set of related code units."@en ;
+    .
+
+code:Abstraction a owl:Class ;
+    rdfs:label "abstraction" ;
+    rdfs:subClassOf code:CodeUnit ;
+    rdfs:comment "An abstraction is a parameterized code unit."@en ;
+    .
+
+code:Procedure a owl:Class ;
+    rdfs:label "function" ;
+    rdfs:subClassOf code:Abstraction ;
+    rdfs:comment "A procedure is a code unit that can be called with a set of arguments."@en ;
+    .
+
+code:Predicate a owl:Class ;
+    rdfs:label "predicate" ;
+    rdfs:subClassOf code:Abstraction ;
+    rdfs:comment "A predicate is a logic programming abstraction that can be instantiated with a set of arguments."@en ;
+    .
+
+code:arity a owl:DatatypeProperty ;
+  rdfs:domain code:Function ;
+  rdfs:range xsd:integer .
+
+code:parent a owl:ObjectProperty ;
+  rdfs:domain code:CodeUnit ;
+  rdfs:range code:CodeUnit .
+
+code:child a owl:ObjectProperty ;
+  rdfs:domain code:CodeUnit ;
+  rdfs:range code:CodeUnit .
+
+
+#
+# Section 3. AI, language models, embeddings, etc.
+#
+
+nt:GenerativeModel a owl:Class ;
+    rdfs:label "Generative Model"@en ;
+    rdfs:subClassOf as:Service ;
+    rdfs:comment "A generative model is a service that generates content based on a set of parameters."@en ;
+    .
+
+nt:LanguageModel a owl:Class ; rdfs:subClassOf nt:GenerativeModel ;
+    rdfs:label "Language Model"@en ;
+    rdfs:comment "A language model is a generative model that generates text based on a set of parameters, including a prompt."@en ;
+    .
 
 nt:Inference a owl:Class ;
-  rdfs:subClassOf as:Object .
+    rdfs:subClassOf as:Object .
 
 nt:TextCompletion a owl:Class ;
-  rdfs:subClassOf nt:Inference .
+    rdfs:subClassOf nt:Inference .
 
 nt:Embedding a owl:Class ;
   rdfs:subClassOf nt:Inference .
@@ -47,6 +122,93 @@ nt:output a owl:FunctionalProperty, owl:DatatypeProperty ;
 nt:model a owl:FunctionalProperty, owl:ObjectProperty ;
   rdfs:domain nt:Inference ;
   rdfs:range nt:Model .
+
+## OpenAI
+
+nt:openai a schema:WebAPI ;
+    as:name "OpenAI API" ;
+    as:summary "OpenAI is a San Francisco-based artificial intelligence research company founded in 2015 by Elon Musk, Sam Altman, and Greg Brockman. OpenAI is developing artificial general intelligence (AGI) to benefit humanity as a whole, rather than a single company or country."@en ;
+    nt:baseURL <https://api.openai.com/v1/> ;
+    nt:documentationURL <https://platform.openai.com/docs/api-reference> ;
+    .
+
+nt:gpt3 a as:Collection ;
+    as:name "OpenAI GPT-3 Models" ;
+    as:partOf nt:openai ;
+    as:summary "GPT-3 is a large transformer-based language model with 175 billion parameters, trained on a dataset of 45 GB of text. It is capable of generating coherent paragraphs of text on a wide range of topics, and can perform a variety of language tasks such as translation, summarization, and question answering. It is also capable of performing rudimentary mathematical calculations and solving simple puzzles."@en ;
+    .
+
+# LATEST MODEL	DESCRIPTION	MAX REQUEST	TRAINING DATA
+# text-davinci-003: Most capable GPT-3 model. Can do any task the other models can do, often with higher quality, longer output and better instruction-following. Also supports inserting completions within text.	4,000 tokens	Up to Jun 2021
+# text-curie-001: Very capable, but faster and lower cost than Davinci.	2,048 tokens	Up to Oct 2019
+# text-babbage-001: Capable of straightforward tasks, very fast, and lower cost.	2,048 tokens	Up to Oct 2019
+# text-ada-001:	Capable of very simple tasks, usually the fastest model in the GPT-3 series, and lowest cost.	2,048 tokens	Up to Oct 2019
+# While Davinci is generally the most capable, the other models can perform certain tasks extremely well with significant speed or cost advantages. For example, Curie can perform many of the same tasks as Davinci, but faster and for 1/10th the cost.
+
+nt:text_davinci_003  a nt:LanguageModel ;
+    as:name "text-davinci-003" ;
+    as:partOf nt:gpt3 ;
+    as:summary "Most capable GPT-3 model. Can do any task the other models can do, often with higher quality, longer output and better instruction-following. Also supports inserting completions within text."@en ;
+    nt:limit 4000 ;
+    nt:trainingCutOff "2021-06-01"^^xsd:date ;
+    .
+
+nt:text_curie_001    a nt:LanguageModel ;
+    as:name "text-curie-001" ;
+    as:partOf nt:gpt3 ;
+    as:summary "Very capable, but faster and lower cost than Davinci."@en ;
+    nt:limit 2048 ;
+    nt:trainingCutOff "2019-10-01"^^xsd:date ;
+    .
+
+nt:text_babbage_001  a nt:LanguageModel ;
+    as:name "text-babbage-001" ;
+    as:partOf nt:gpt3 ;
+    as:summary "Capable of straightforward tasks, very fast, and lower cost."@en ;
+    nt:limit 2048 ;
+    nt:trainingCutOff "2019-10-01"^^xsd:date ;
+    .
+
+# The Codex models are descendants of our GPT-3 models that can
+# understand and generate code. Their training data contains both
+# natural language and billions of lines of public code from
+# GitHub. Learn more.
+
+# They’re most capable in Python and proficient in over a dozen
+# languages including JavaScript, Go, Perl, PHP, Ruby, Swift,
+# TypeScript, SQL, and even Shell.
+
+# We currently offer two Codex models:
+
+# code-davinci-002    Most capable Codex model.
+#   Particularly good at translating natural language to code.
+#   In addition to completing code, also supports inserting completions within code.
+#   8,000 tokens Up to Jun 2021
+#
+# code-cushman-001    Almost as capable as Davinci Codex, but slightly faster.
+#   This speed advantage may make it preferable for real-time applications.
+
+nt:codex a as:Collection ;
+    as:name "OpenAI Codex" ;
+    as:attributedTo nt:openai ;
+    as:summary "The Codex models are descendants of the GPT-3 models that can understand and generate code. Their training data contains both natural language and billions of lines of public code from GitHub."@en ;
+    .
+
+nt:code_davinci_002  a nt:LanguageModel ;
+    as:name "code-davinci-002" ;
+    as:partOf nt:codex ;
+    as:summary "Most capable Codex model. Particularly good at translating natural language to code. In addition to completing code, also supports inserting completions within code."@en ;
+    nt:limit 8000 ;
+    nt:trainingCutOff "2021-06-01"^^xsd:date ;
+    .
+
+nt:code_cushman_002  a nt:LanguageModel ;
+    as:name "code-cushman-001" ;
+    as:partOf nt:codex ;
+    as:summary "Almost as capable as Davinci Codex, but slightly faster. This speed advantage may make it preferable for real-time applications."@en ;
+    nt:limit 8000 ;
+    nt:trainingCutOff "2021-06-01"^^xsd:date ;
+    .
 
 ### Conversation agents
 
@@ -107,22 +269,4 @@ nt:highlights a owl:ObjectProperty ;
   rdfs:domain schema:CreativeWork ;
   rdfs:range schema:Quotation .
 
-code:CodeUnit a as:Object .
-code:Module a code:CodeUnit .
-code:Function a code:CodeUnit .
 
-code:arity a owl:DatatypeProperty ;
-  rdfs:domain code:Function ;
-  rdfs:range xsd:integer .
-
-code:documentation a owl:DatatypeProperty ;
-  rdfs:domain code:CodeUnit ;
-  rdfs:range xsd:string .
-
-code:parent a owl:ObjectProperty ;
-  rdfs:domain code:CodeUnit ;
-  rdfs:range code:CodeUnit .
-
-code:child a owl:ObjectProperty ;
-  rdfs:domain code:CodeUnit ;
-  rdfs:range code:CodeUnit .
