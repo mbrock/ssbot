@@ -211,7 +211,7 @@ respond(X) :-
 
 telegram_api :-
     openapi_read('api/telegram.yaml', Spec),
-    openapi_to_rdf(Spec, nt:telegram_api).
+    openapi_to_rdf(Spec, nt:'api/telegram').
 
 openapi_to_rdf(Spec, API) :-
     item(Spec, openapi, string, "3.0.0"),
@@ -244,9 +244,9 @@ openapi_path(Path, PathData, API) :-
     know(ID, rdf:type, schema:'EntryPoint'),
     know(ID, schema:documentation, DocURL^^xsd:anyURI),
     know(ID, schema:isPartOf, API),
-    openapi_request_body(PathData, ID).
+    openapi_request_body(API, PathData, ID).
     
-openapi_request_body(PathData, ID) :-
+openapi_request_body(API, PathData, ID) :-
     debug(openapi, 'PathData: ~w', [PathData]),
     ( item(PathData, post/requestBody/content/'application/json'/schema, is_dict, Schema)
     ; item(PathData, post/requestBody/content/'multipart/form-data'/schema, is_dict, Schema)
@@ -256,12 +256,16 @@ openapi_request_body(PathData, ID) :-
     item(Schema, properties, is_dict, Properties),
     forall(
         get_dict(Key, Properties, Value),
-        openapi_request_body_property(Key, Value, ID)).
+        openapi_request_body_property(API, Key, Value, ID)).
 
-openapi_request_body_property(Key, Value, ID) :-
+openapi_request_body_property(API, Key, Value, ID) :-
     debug(openapi, 'Property: ~w ~w', [Key, Value]),
     item(Value, description, string, Description),
     format(atom(PropertyID), '~w/~w', [ID, Key]),
+    know(PropertyID, rdf:type, http:'Parameter'),
+    know(PropertyID, http:paramName, Key^^xsd:string),
+    know(PropertyID, schema:isPartOf, ID),
+    know(PropertyID, schema:isPartOf, API),
     know(PropertyID, schema:description, Description^^xsd:string).
 
 :- debug(openapi).

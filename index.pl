@@ -24,6 +24,8 @@
 
 :- use_module(library(pengines), []).
 
+:- use_module(library(md/md_parse), [md_parse_string/2]).
+
 :- http_handler(root(.), graph(html), []).
 :- http_handler(root(graph), graph(ttl), []).
 
@@ -67,12 +69,16 @@ graph(html, _Request) :-
         [ title('node.town'),
           link([rel(stylesheet),
                 href('https://font.node.town/index.css')]),
-          style(['body { font-family: "helvetica", monospace; }',
+          link([rel(stylesheet),
+                href('https://fonts.cdnfonts.com/css/univers-lt-pro')]),
+          style(['body { font-family: "univers lt pro", "helvetica", sans-serif; }',
+                 'pre, tt { font-family: "berkeley mono", monospace; }',
                  "article { border: 1px solid #ccc; padding: .5em; }",
                  "article > h2 { margin: 0; margin-bottom: 0.5em; }",
                  "h1, h2 { font-size: inherit; }",
                  "section { display: flex; flex-wrap: wrap; gap: 1em }",
-                 "[lang] { font-family: times; }"
+                 "[lang] { opacity: 0.8; }",
+                 "a { text-decoration: none; border-bottom: 1px solid #0005; }"
                 ])
         ],
         [h1('node.town'),
@@ -131,7 +137,7 @@ show(date_time(Y,M,D,H,Min,S,Offset)^^_) -->
 
 show(X) -->
     { atom(X), rdf_resource(X), rdf(X, rdfs:label, Label) },
-    html(a([style("font-family: helvetica"), href(X)], \show(Label))).
+    html(a([style(""), href(X)], \show(Label))).
 
 show(X) -->
     { atom(X), rdf_resource(X) },
