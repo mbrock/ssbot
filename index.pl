@@ -19,7 +19,7 @@
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/html_write)).
-:- use_module(library(http/json), []).
+:- use_module(library(http/json), [json_read_dict/2]).
 :- use_module(library(http/http_dispatch)).
 
 :- use_module(library(pengines), []).
@@ -71,8 +71,8 @@ graph(html, _Request) :-
                  "article { border: 1px solid #ccc; padding: .5em; }",
                  "article > h2 { margin: 0; margin-bottom: 0.5em; }",
                  "h1, h2 { font-size: inherit; }",
-                 "article { width: 30em; }",
-                 "section { display: flex; flex-wrap: wrap; gap: 1em }"
+                 "section { display: flex; flex-wrap: wrap; gap: 1em }",
+                 "[lang] { font-family: times; }"
                 ])
         ],
         [h1('node.town'),
@@ -110,13 +110,18 @@ description_tables([Subject-Pairs|T]) -->
         html(article([h2("~w"-Subject), table(\properties(Pairs))])),
         description_tables(T).
 
-show(X^^_Y) -->
-    { string(X) },
+show(X^^'http://www.w3.org/2001/XMLSchema#string') -->
     html(span(X)).
+
+show(X^^'http://www.w3.org/2001/XMLSchema#anyURI') -->
+    html(a([href(X)], X)).
+
+show(X^^'https://node.town/json') -->
+    html(pre(X)).
 
 show(X^^_) -->
     { number(X) },
-    html(span(X)).
+    html(tt(X)).
 
 show(date(Y,M,D)^^_) -->
     html(span("~w-~w-~w"-[Y,M,D])).

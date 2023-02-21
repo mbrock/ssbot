@@ -9,6 +9,7 @@
 @prefix      as: <http://www.w3.org/ns/activitystreams#> .
 @prefix ontolex: <http://www.w3.org/ns/lemon/ontolex#> .
 @prefix      wn: <http://wordnet-rdf.princeton.edu/> .
+@prefix  schema: <https://schema.org/> .
 
 @prefix cnt: <http://www.w3.org/2011/content#> .
 @prefix http: <http://www.w3.org/2011/http#> .
@@ -31,6 +32,8 @@
 [ a lib:Namespace ; lib:mnemonic "httpm" ; lib:namespace httpm: ] .
 [ a lib:Namespace ; lib:mnemonic "httph" ; lib:namespace httph: ] .
 [ a lib:Namespace ; lib:mnemonic "httpc" ; lib:namespace httpc: ] .
+
+[ a lib:Namespace ; lib:mnemonic "schema" ; lib:namespace schema: ] .
 
 <activitystreams> a void:Dataset ;
   dc:title "Activity Streams 2.0"@en ;
@@ -95,4 +98,7 @@
   void:dataDump <wordnet.nt.gz> ;
   void:dataDump <wordnet-ontology.xml> .
 
-
+<schema> a void:Dataset ;
+  dc:title "Schema.org" ;
+  lib:source schema: ;
+  void:dataDump <schemaorg-current-https.ttl> .

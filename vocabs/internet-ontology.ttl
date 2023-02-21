@@ -27,6 +27,12 @@ nt: a owl:Ontology ;
 
 http:Message rdfs:subClassOf as:Activity .
 
+## define nt:json to be used like "{foo: 1}"^^nt:json
+nt:json a owl:Datatype ;
+    rdfs:label "JSON"@en ;
+    rdfs:comment "A JSON object"@en ;
+    owl:equivalentClass schema:Text ;
+    .
 
 #
 # Section 2. Software, systems, code, modules, etc.
@@ -258,10 +264,10 @@ nt:discordId a owl:DatatypeProperty ;
   rdfs:domain as:Object ;
   rdfs:range xsd:integer .
 
-nt:jsonPayload a owl:DatatypeProperty ;
-  rdfs:label "JSON Payload" ;
-  rdfs:domain as:Update ;
-  rdfs:range xsd:string .
+nt:payload a owl:DatatypeProperty ;
+    rdfs:label "payload" ;
+    rdfs:domain as:Object ;
+    rdfs:range nt:json .
 
 nt:Readwise a as:Service .
 

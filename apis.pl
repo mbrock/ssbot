@@ -10,6 +10,7 @@
 :- use_module(library(http/http_client)).
 :- use_module(library(http/http_json)).
 :- use_module(library(apply_macros)).
+:- use_module(library(openapi), [openapi_read/2]).
 
 bearer_prefix(discord, "Bot").
 bearer_prefix(readwise, "Token").

@@ -1,11 +1,13 @@
 :- module(grok,
           [hear/1, past/2, grok/0, frob/2, frob/0, dull/1,
-           cope/1
+           cope/1,
+           openapi_to_rdf/2
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
 :- use_module(library(persistency)).
 :- use_module(library(http/json)).
+:- use_module(library(openapi), [openapi_read/2]).
 :- use_module(openai, [completion/3]).
 :- use_module(base, [mint/1, know/3]).
 :- use_module(otp, [spin/2]).
@@ -78,7 +80,7 @@ json(X, Data) :-
     with_output_to(
         string(String),
         json_write_dict(current_output, Data, [width(80)])),
-    know(X, nt:jsonPayload, String).
+    know(X, nt:jsonPayload, String^^nt:json).
 
 :- multifile dull/1.
 
@@ -204,3 +206,62 @@ respond(X) :-
         json(_{chat_id: TelegramID, text: Content}),
         Result),
     json(X, Result).
+
+:- rdf_meta openapi_to_rdf(+, r).
+
+telegram_api :-
+    openapi_read('api/telegram.yaml', Spec),
+    openapi_to_rdf(Spec, nt:telegram_api).
+
+openapi_to_rdf(Spec, API) :-
+    item(Spec, openapi, string, "3.0.0"),
+    item(Spec, info/title, string, Title),
+    item(Spec, info/version, string, Version),
+
+    know(API, rdf:type, schema:'WebAPI'),
+    know(API, schema:name, Title^^xsd:string),
+    know(API, schema:version, Version^^xsd:string),
+
+    % servers
+    item(Spec, servers, is_list, Servers),
+    forall(
+        member(Server, Servers),
+        openapi_server(Server, API)),
+
+    % paths
+    item(Spec, paths, is_dict, Paths),
+    forall(
+        item(Paths, Path, is_dict, PathData),
+        openapi_path(Path, PathData, API)).
+
+openapi_server(Server, API) :-
+    item(Server, url, string, URL),
+    know(API, schema:urlTemplate, URL^^xsd:string).
+
+openapi_path(Path, PathData, API) :-
+    item(PathData, post/externalDocs/url, string, DocURL),
+    format(atom(ID), '~w~w/POST', [API, Path]),
+    know(ID, rdf:type, schema:'EntryPoint'),
+    know(ID, schema:documentation, DocURL^^xsd:anyURI),
+    know(ID, schema:isPartOf, API),
+    openapi_request_body(PathData, ID).
+    
+openapi_request_body(PathData, ID) :-
+    debug(openapi, 'PathData: ~w', [PathData]),
+    ( item(PathData, post/requestBody/content/'application/json'/schema, is_dict, Schema)
+    ; item(PathData, post/requestBody/content/'multipart/form-data'/schema, is_dict, Schema)
+    ),
+    !,
+    item(Schema, type, string, "object"),
+    item(Schema, properties, is_dict, Properties),
+    forall(
+        get_dict(Key, Properties, Value),
+        openapi_request_body_property(Key, Value, ID)).
+
+openapi_request_body_property(Key, Value, ID) :-
+    debug(openapi, 'Property: ~w ~w', [Key, Value]),
+    item(Value, description, string, Description),
+    format(atom(PropertyID), '~w/~w', [ID, Key]),
+    know(PropertyID, schema:description, Description^^xsd:string).
+
+:- debug(openapi).
