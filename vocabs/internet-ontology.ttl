@@ -13,45 +13,19 @@
 <https://node.town/> a owl:Ontology ;
   rdfs:comment "Node.Town Internet Ontology 1.0"@en .
 
-### AI stuff
+nt:API a owl:Class ; rdfs:label "API" ; rdfs:subClassOf as:Service .
+nt:GenerativeModel a owl:Class ; as:name "Generative Model"@en .
 
-nt:OpenAI a as:Organization ;
-  as:name "OpenAI" .
+nt:openai a as:Organization ; as:name "OpenAI" .
+nt:gpt3   a nt:API          ; as:name "GPT-3 API" ;
+  as:attributedTo nt:openai ;
+        as:summary "GPT-3 is a language model developed by OpenAI. It is the successor to GPT-2, and is the third in the GPT series of language models. GPT-3 is a large transformer-based language model with 175 billion parameters, trained on a dataset of 45 GB of text. It is capable of generating coherent paragraphs of text on a wide range of topics, and can perform a variety of language tasks such as translation, summarization, and question answering. It is also capable of performing rudimentary mathematical calculations and solving simple puzzles."@en ;
 
-nt:GPT3 a as:Service ;
-  as:name "OpenAI GPT-3" ;
-  as:partOf nt:OpenAI .
-
-nt:Codex a as:Service ;
-  as:name "OpenAI Codex" ;
-  as:partOf nt:OpenAI .
-
-nt:Model a as:Object ;
-  as:name "Model"@en .
-
-nt:GPT3TextDavinci3 a nt:Model ;
-  as:name "text-davinci-003" ;
-  as:partOf nt:GPT3 .
-
-nt:GPT3TextCurie1 a nt:Model ;
-  as:name "text-curie-001" ;
-  as:partOf nt:GPT3 .
-
-nt:GPT3TextBabbage1 a nt:Model ;
-  as:name "text-babbage-001" ;
-  as:partOf nt:GPT3 .
-
-nt:GPT3TextAda1 a nt:Model ;
-  as:name "text-ada-001" ;
-  as:partOf nt:GPT3 .
-
-nt:GPT3CodeDavinci2 a nt:Model ;
-  as:name "code-davinci-002" ;
-  as:partOf nt:Codex .
-
-nt:GPT3CodeCushman2 a nt:Model ;
-  as:name "code-cushman-002" ;
-  as:partOf nt:Codex .
+nt:text_davinci_003  a nt:GenerativeModel .
+nt:text_curie_001    a nt:GenerativeModel .
+nt:text_babbage_001  a nt:GenerativeModel .
+nt:code_davinci_002  a nt:GenerativeModel .
+nt:code_cushman_002  a nt:GenerativeModel .
 
 nt:Inference a owl:Class ;
   rdfs:subClassOf as:Object .
