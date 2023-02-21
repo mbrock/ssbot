@@ -4,25 +4,25 @@
             dial/0
           ]).
 
-:- use_module(otp).
-:- use_module(base).
-:- use_module(grok).
-:- use_module(hack).
-:- use_module(openai).
-:- use_module(discord).
-:- use_module(telegram).
+:- reexport(otp).
+:- reexport(base).
+:- reexport(grok).
+:- reexport(hack).
+:- reexport(openai).
+:- reexport(discord).
+:- reexport(telegram).
 
 :- debug(spin).
 
-:- use_module(library(semweb/rdf11)).
+:- reexport(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/html_write)).
-:- use_module(library(http/json)).
+:- use_module(library(http/json), []).
 :- use_module(library(http/http_dispatch)).
 
-:- use_module(library(pengines)).
+:- use_module(library(pengines), []).
 
 :- http_handler(root(.), graph(html), []).
 :- http_handler(root(graph), graph(ttl), []).
