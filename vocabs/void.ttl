@@ -17,13 +17,16 @@
 @prefix httph: <http://www.w3.org/2011/http-headers#> .
 @prefix httpc: <http://www.w3.org/2011/http-statusCodes#> .
 
+@prefix      nt: <https://node.town/> .
+@prefix      id: <https://id.node.town/> .
+
 @prefix	  yacht: <http://yacht:4000/> .
 @prefix	 hamlet: <http://hamlet:4000/> .
-@prefix      nt: <https://node.town/> .
 
 [ a lib:Namespace ; lib:mnemonic "wn" ; lib:namespace wn: ] .
 [ a lib:Namespace ; lib:mnemonic "as" ; lib:namespace as: ] .
 [ a lib:Namespace ; lib:mnemonic "nt" ; lib:namespace nt: ] .
+[ a lib:Namespace ; lib:mnemonic "id" ; lib:namespace id: ] .
 [ a lib:Namespace ; lib:mnemonic "yacht" ; lib:namespace yacht: ] .
 [ a lib:Namespace ; lib:mnemonic "hamlet" ; lib:namespace hamlet: ] .
 

@@ -266,6 +266,6 @@ openapi_request_body_property(API, Key, Value, ID) :-
     know(PropertyID, http:paramName, Key^^xsd:string),
     know(PropertyID, schema:isPartOf, ID),
     know(PropertyID, schema:isPartOf, API),
-    know(PropertyID, schema:description, Description^^xsd:string).
+    know(PropertyID, schema:description, Description^^nt:markdown).
 
 :- debug(openapi).

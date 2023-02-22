@@ -27,10 +27,15 @@ nt: a owl:Ontology ;
 
 http:Message rdfs:subClassOf as:Activity .
 
-## define nt:json to be used like "{foo: 1}"^^nt:json
 nt:json a owl:Datatype ;
     rdfs:label "JSON"@en ;
     rdfs:comment "A JSON object"@en ;
+    owl:equivalentClass schema:Text ;
+    .
+
+nt:markdown a owl:Datatype ;
+    rdfs:label "Markdown"@en ;
+    rdfs:comment "A Markdown snippet"@en ;
     owl:equivalentClass schema:Text ;
     .
 

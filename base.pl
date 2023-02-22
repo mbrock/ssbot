@@ -8,7 +8,8 @@
             turtle/2,
             sync/1,
             graph_url/1,
-            mint/1
+            mint/1,
+            turn/2
           ]).
 
 :- use_module(library(semweb/rdf11)).
@@ -77,6 +78,12 @@ deny(S, P, O) :-
 deny(S, P, O, G) :-
     rdf_retractall(S, P, O, G).
 
+:- rdf_meta turn(t, t).
+turn(tired(S0, P0, O0), wired(S1, P1, O1)) :-
+    rdf(S0, P0, O0, G),
+    rdf_retractall(S0, P0, O0, G),
+    rdf_assert(S1, P1, O1, G).
+
 alphabet(zb32, `ybndrfg8ejkmcpqxot1uwisza345h769`).
 
 index(List, Index, Element) :-
@@ -88,11 +95,11 @@ randseqs(K, N, Seq) :-
 
 mint(url(X)) :-
     mint(atom(A)),
-    format(atom(X), "https://node.town/~s", A).
+    format(atom(X), "https://id.node.town/~s", A).
 
 mint(atom(A)) :-
     mint(key(T, X)),
-    format(atom(A), "id/~s/~s", [T, X]).
+    format(atom(A), "~s/~s", [T, X]).
 
 mint(key(T, X)) :-
     get_time(UnixTime),

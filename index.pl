@@ -71,15 +71,7 @@ graph(html, _Request) :-
                 href('https://font.node.town/index.css')]),
           link([rel(stylesheet),
                 href('https://fonts.cdnfonts.com/css/univers-lt-pro')]),
-          style(['body { font-family: "univers lt pro", "helvetica", sans-serif; }',
-                 'pre, tt { font-family: "berkeley mono", monospace; }',
-                 "article { border: 1px solid #ccc; padding: .5em; }",
-                 "article > h2 { margin: 0; margin-bottom: 0.5em; }",
-                 "h1, h2 { font-size: inherit; }",
-                 "section { display: flex; flex-wrap: wrap; gap: 1em }",
-                 "[lang] { opacity: 0.8; }",
-                 "a { text-decoration: none; border-bottom: 1px solid #0005; }"
-                ])
+          \style
         ],
         [h1('node.town'),
          \graph_view]).
@@ -89,15 +81,74 @@ graph(ttl, _Request) :-
     graph_url(G),
     turtle(current_output, G).
 
+css_line(Selector, Property, Value, Line) :-
+    css_value(Value, Value1),
+    format(string(Line), "~w { ~w: ~w }~n",
+           [Selector, Property, Value1]).
+
+css_value(Value, Value) :-
+    ( atom(Value); number(Value) ),
+    !.
+
+css_value(Value, Value1) :-
+    is_list(Value),
+    !,
+    maplist(css_value, Value, Values),
+    atomic_list_concat(Values, ', ', Value1).
+
+css_value(Value, Value1) :-
+    format(string(Value1), "~p", [Value]).
+
+css_line(Line) :-
+    css(Selector, Property, Value),
+    css_line(Selector, Property, Value, Line).
+
+css(body, 'font-family', ["univers lt pro", helvetica, 'sans-serif']).
+css(body, 'font-size', '16px').
+css(body, 'line-height', '20px').
+css(body, 'padding', '10px 20px').
+
+css('h2, pre, tt', 'font-family', ["berkeley mono", monospace]).
+css(article, border, '1px solid #aaa').
+css(article, 'box-shadow', '-4px 0px 0 0 #aaa').
+css(article, padding, '.5em').
+css(article, 'max-width', '36em').
+
+css('article > h2', margin, 0).
+css('article > h2', 'margin-bottom', '.5em').
+css('h1, h2', 'font-size', inherit).
+css('h1, h2', 'font-weight', normal).
+css(section, display, flex).
+css(section, 'flex-wrap', wrap).
+css(section, gap, '1em').
+css('[lang]', opacity, 0.8).
+css(a, 'text-decoration', none).
+%css(a, 'border-bottom', '1px solid #0005').
+css('td:nth-child(1)', 'text-align', right).
+css('td:nth-child(1)', 'vertical-align', top).
+css('td:nth-child(1)', 'padding-right', '.5em').
+css('td:nth-child(1)', 'white-space', nowrap).
+css('td:nth-child(2)', 'vertical-align', top).
+css('td > p:first-child', 'margin-top', 0).
+css('td > p:last-child', 'margin-bottom', 0).
+
+css('[data-prefix=nt]', 'font-style', italic).
+
+style -->
+    { findall(Line, css_line(Line), Lines) },
+    html(style(Lines)).
+
 description(Subject, Pairs) :-
     rdf_resource(Subject),
     (rdf(Subject, _, _, nt:graph) -> true),
-    findall(P-O, rdf(Subject, P, O), Pairs).
+    findall(P-O, rdf(Subject, P, O), Pairs0),
+    keysort(Pairs0, Pairs).
 
 descriptions(Descriptions) :-
     findall(Subject-Pairs,
             description(Subject, Pairs),
-            Descriptions).
+            Descriptions0),
+    keysort(Descriptions0, Descriptions).
 
 graph_view -->
         { descriptions(Descriptions) },
@@ -107,23 +158,32 @@ graph_view -->
 
 properties([]) --> [].
 properties([P-O|T]) -->
-        html(tr([td([style("text-align: right; vertical-align: top; padding-right: 0.5em; white-space: nowrap")], \show(P)),
-                 td([style("vertical-align: top")], \show(O))])),
+        html(tr([td(\show(P)),
+                 td(\show(O))])),
         properties(T).
 
 description_tables([]) --> [].
 description_tables([Subject-Pairs|T]) -->
-        html(article([h2("~w"-Subject), table(\properties(Pairs))])),
-        description_tables(T).
-
+    { anchor(Subject, Anchor) },
+    html(
+        article(
+            [id(Anchor)],
+            [h2("~w"-Anchor),
+             table(\properties(Pairs))])),
+    description_tables(T).
+    
 show(X^^'http://www.w3.org/2001/XMLSchema#string') -->
-    html(span(X)).
+    !, html(span(X)).
 
 show(X^^'http://www.w3.org/2001/XMLSchema#anyURI') -->
-    html(a([href(X)], X)).
+    !, html(a([href(X)], X)).
 
 show(X^^'https://node.town/json') -->
-    html(pre(X)).
+    !, html(details([summary("JSON"), pre(X)])).
+
+show(X^^'https://node.town/markdown') -->
+    { md_parse_string(X, DOM), ! },
+    html(DOM).
 
 show(X^^_) -->
     { number(X) },
@@ -136,8 +196,13 @@ show(date_time(Y,M,D,H,Min,S,Offset)^^_) -->
     html(span("~w-~w-~w ~w:~w:~w ~w"-[Y,M,D,H,Min,S,Offset])).
 
 show(X) -->
-    { atom(X), rdf_resource(X), rdf(X, rdfs:label, Label) },
-    html(a([style(""), href(X)], \show(Label))).
+    { atom(X),
+      rdf_resource(X),
+      rdf_global_id(Prefix:Local, X),
+      % rdf(X, rdfs:label, Label),
+      anchor_href(X, Href) },
+    html(a([href(Href), 'data-prefix'(Prefix)],
+           [Prefix, ":", Local])).
 
 show(X) -->
     { atom(X), rdf_resource(X) },
@@ -151,4 +216,10 @@ show(@(X, Lang)) -->
     { string(X), atom(Lang) },
     html(span([lang(Lang)], X)).
 
+anchor(X, Href) :-
+    rdf_global_id(Prefix:Local, X),
+    format(atom(Href), "~w:~w", [Prefix, Local]).
 
+anchor_href(X, Href) :-
+    anchor(X, Local),
+    format(atom(Href), "#~w", [Local]).
