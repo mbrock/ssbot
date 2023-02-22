@@ -29,6 +29,41 @@
 :- http_handler(root(.), graph(html), []).
 :- http_handler(root(graph), graph(ttl), []).
 
+:- shell('cd web && npm run esbuild').
+
+:- http_handler(root('index.js'),
+                http_reply_file('web/dist/index.js', []), []).
+:- http_handler(root('index.js.map'),
+                http_reply_file('web/dist/index.js.map', []), []).
+
+:- use_module(library(http/websocket)).
+
+:- http_handler(root(ws),
+                http_upgrade_to_websocket(talk, []),
+                [spawn([])]).
+
+talk(WebSocket) :-
+    mint(url(Id)),
+    know(Id, rdf:type, nt:'WebSocket'),
+    spin(talk(Id, recv), talk(recv, Id, WebSocket)),
+    spin(talk(Id, send), talk(send, Id, WebSocket)),
+    wipe(talk(Id, _)).
+
+talk(recv, Id, WebSocket) :-
+    ws_receive(WebSocket, Message, [format(prolog)]),
+    (   Message.opcode == close
+    ->  know(Id, nt:closed, true)
+    ;   mint(url(MsgId)),
+        know(MsgId, as:context, Id),
+        get_time(TimeStamp),
+        know(MsgId, as:time, TimeStamp),
+        (   Message.opcode == text
+        ->  know(MsgId, as:content, Message.data)
+        ;   true
+        ),
+        talk(recv, Id, WebSocket)
+    ).
+
 info(X) :-
     print_message(informational, X).
 
@@ -71,10 +106,12 @@ graph(html, _Request) :-
                 href('https://font.node.town/index.css')]),
           link([rel(stylesheet),
                 href('https://fonts.cdnfonts.com/css/univers-lt-pro')]),
+          script([src('index.js'), async], []),
           \style
         ],
-        [h1('node.town'),
-         \graph_view]).
+        main([h1('node.town'),
+              \graph_view,
+              div([id(editor), autofocus], [])])).
 
 graph(ttl, _Request) :-
     format('content-type: text/turtle~n~n'),
@@ -109,7 +146,7 @@ css('[id]^="nt:"]', 'font-style', italic).
 css('[lang]', 'opacity', 0.8).
 css('a', 'text-decoration', none).
 css('section', 'flex-direction', 'column').
-css('section', 'max-width', '40em').
+
 css('article h2', 'margin', 0).
 css('article h2', 'display', 'inline-flex').
 css('article h2', 'border', '1px solid #aaa').
@@ -122,12 +159,31 @@ css('table', 'max-width', '100%').
 %css('table', 'min-width', '20em').
 %css('table', 'padding', '.5em').
 css('td', 'padding', '0 .5rem').
-css('body', 'display', flex).
 css('body', 'font-family', ["univers lt pro", helvetica, 'sans-serif']).
 css('body', 'font-size', '16px').
 css('body', 'line-height', '22px').
-css('body', 'padding', '10px 22px').
-css('body', 'gap', '1em').
+css('body', 'margin', 0).
+
+css(main, display, grid).
+css(main, 'grid-template-rows', 'auto 1fr auto').
+css('body, main', position, absolute).
+css('body, main', top, 0).
+css('body, main', left, 0).
+css('body, main', right, 0).
+css('body, main', bottom, 0).
+
+css(section, overflow, auto).
+css(section, padding, '1em').
+
+css(h1, 'border-bottom', '1px solid #aaa').
+css(h1, background, '#fbfff2').
+css(h1, padding, '0 0.5rem').
+
+css('#editor', 'grid-row', 3).
+css('#editor', 'grid-column', 1).
+css('#editor', 'border-top', '1px solid #aaa').
+css('#editor .cm-scroller', 'font-family', ["berkeley mono", monospace]).
+
 css('h1, h2', 'font-size', inherit).
 css('h1, h2', 'font-weight', normal).
 css('pre, tt', 'font-family', ["berkeley mono", monospace]).

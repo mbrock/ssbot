@@ -1,0 +1,23 @@
+{
+  "name": "nodetown-web",
+  "version": "1.0.0",
+  "description": "Node.Town Web Client",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "esbuild": "esbuild --bundle --sourcemap --outdir=dist index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mbrock/ssbot.git"
+  },
+  "author": "Mikael Brockman",
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/mbrock/ssbot/issues"
+  },
+  "homepage": "https://github.com/mbrock/ssbot#readme",
+  "dependencies": {
+    "codemirror": "^6.0.1"
+  }
+}
