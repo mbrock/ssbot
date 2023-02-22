@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+echo -n "<`whoami`> "
+if test `git status --short | wc -l` = 1
+then echo `git status --short` `git shortstat | sed 's,1 file changed ,,'`
+else git shortstat
+fi
+

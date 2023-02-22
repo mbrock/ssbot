@@ -86,16 +86,16 @@ code:Predicate a owl:Class ;
     .
 
 code:arity a owl:DatatypeProperty ;
-  rdfs:domain code:Function ;
-  rdfs:range xsd:integer .
+    rdfs:domain code:Function ;
+    rdfs:range xsd:integer .
 
 code:parent a owl:ObjectProperty ;
-  rdfs:domain code:CodeUnit ;
-  rdfs:range code:CodeUnit .
+    rdfs:domain code:CodeUnit ;
+    rdfs:range code:CodeUnit .
 
 code:child a owl:ObjectProperty ;
-  rdfs:domain code:CodeUnit ;
-  rdfs:range code:CodeUnit .
+    rdfs:domain code:CodeUnit ;
+    rdfs:range code:CodeUnit .
 
 
 #
@@ -120,19 +120,19 @@ nt:TextCompletion a owl:Class ;
     rdfs:subClassOf nt:Inference .
 
 nt:Embedding a owl:Class ;
-  rdfs:subClassOf nt:Inference .
+    rdfs:subClassOf nt:Inference .
 
 nt:input a owl:FunctionalProperty, owl:DatatypeProperty ;
-  rdfs:domain nt:Inference ;
-  rdfs:range xsd:string .
+    rdfs:domain nt:Inference ;
+    rdfs:range xsd:string .
 
 nt:output a owl:FunctionalProperty, owl:DatatypeProperty ;
-  rdfs:domain nt:Inference ;
-  rdfs:range xsd:string .
+    rdfs:domain nt:Inference ;
+    rdfs:range xsd:string .
 
 nt:model a owl:FunctionalProperty, owl:ObjectProperty ;
-  rdfs:domain nt:Inference ;
-  rdfs:range nt:Model .
+    rdfs:domain nt:Inference ;
+    rdfs:range nt:Model .
 
 ## OpenAI
 
@@ -224,12 +224,12 @@ nt:code_cushman_002  a nt:LanguageModel ;
 ### Conversation agents
 
 nt:chatContext a owl:DatatypeProperty ;
-  rdfs:domain as:Note ;
-  rdfs:range xsd:string .
+    rdfs:domain as:Note ;
+    rdfs:range xsd:string .
 
 nt:NodeTown a as:Service ;
-  as:name "Node.Town" ;
-  as:url <https://node.town> .
+    as:name "Node.Town" ;
+    as:url <https://node.town> .
 
 nt:Classify a as:Service .
 nt:Weather a as:Service .
@@ -239,35 +239,35 @@ nt:Scrape a as:Service .
 ### Messenger stuff
 
 nt:platform a owl:ObjectProperty ;
-  rdfs:label "platform" ;
-  rdfs:domain as:Object ;
-  rdfs:range as:Object .
+    rdfs:label "platform" ;
+    rdfs:domain as:Object ;
+    rdfs:range as:Object .
 
 nt:Telegram a as:Service ;
-  rdfs:label "Telegram" ;
-  as:name "Telegram"@en ;
-  as:url <https://telegram.org> .
+    rdfs:label "Telegram" ;
+    as:name "Telegram"@en ;
+    as:url <https://telegram.org> .
 
 nt:Discord a as:Service ;
-  rdfs:label "Discord" ;
-  as:name "Discord"@en ;
-  as:url <https://discord.com> .
+    rdfs:label "Discord" ;
+    as:name "Discord"@en ;
+    as:url <https://discord.com> .
 
 nt:idScope a owl:ObjectProperty ;
-  rdfs:domain owl:Property ;
-  rdfs:range as:Service .
+    rdfs:domain owl:Property ;
+    rdfs:range as:Service .
 
 nt:telegramId a owl:DatatypeProperty ;
-  nt:idScope nt:Telegram ;
-  rdfs:label "Telegram ID" ;
-  rdfs:domain as:Object ;
-  rdfs:range xsd:integer .
+    nt:idScope nt:Telegram ;
+    rdfs:label "Telegram ID" ;
+    rdfs:domain as:Object ;
+    rdfs:range xsd:integer .
 
 nt:discordId a owl:DatatypeProperty ;
-  nt:idScope nt:Discord ;
-  rdfs:label "Discord ID" ;
-  rdfs:domain as:Object ;
-  rdfs:range xsd:integer .
+    nt:idScope nt:Discord ;
+    rdfs:label "Discord ID" ;
+    rdfs:domain as:Object ;
+    rdfs:range xsd:integer .
 
 nt:payload a owl:DatatypeProperty ;
     rdfs:label "payload" ;
@@ -277,7 +277,13 @@ nt:payload a owl:DatatypeProperty ;
 nt:Readwise a as:Service .
 
 nt:highlights a owl:ObjectProperty ;
-  rdfs:domain schema:CreativeWork ;
-  rdfs:range schema:Quotation .
+    rdfs:domain schema:CreativeWork ;
+    rdfs:range schema:Quotation .
 
+nt:outbox a as:Collection ;
+    as:name "Node.Town Outbox" ;
+    as:summary "Outbox of messages to be sent to the outside world."@en .
 
+nt:inbox a as:Collection ;
+    as:name "Node.Town Inbox" ;
+    as:summary "Inbox of messages from the outside world."@en .

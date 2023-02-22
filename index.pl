@@ -103,83 +103,112 @@ css_line(Line) :-
     css(Selector, Property, Value),
     css_line(Selector, Property, Value, Line).
 
-css(body, 'font-family', ["univers lt pro", helvetica, 'sans-serif']).
-css(body, 'font-size', '16px').
-css(body, 'line-height', '20px').
-css(body, 'padding', '10px 20px').
-
-css('h2, pre, tt', 'font-family', ["berkeley mono", monospace]).
-css(article, border, '1px solid #aaa').
-css(article, 'box-shadow', '-4px 0px 0 0 #aaa').
-css(article, padding, '.5em').
-css(article, 'max-width', '36em').
-css(article, 'min-width', '20em').
-css('article > h2', margin, 0).
-css('article > h2', 'margin-bottom', '.5em').
+css('h1, h2', 'margin', 0).
+css(':target', 'background-color', 'lightyellow').
+css('[id]^="nt:"]', 'font-style', italic).
+css('[lang]', 'opacity', 0.8).
+css('a', 'text-decoration', none).
+css('section', 'flex-direction', 'column').
+css('section', 'max-width', '40em').
+css('article h2', 'margin', 0).
+css('article h2', 'display', 'inline-flex').
+css('article h2', 'border', '1px solid #aaa').
+css('article h2', 'border-bottom', none).
+css('article h2', 'padding', '0 0.5rem').
+css('article h2', 'background-color', '#fbfff2').
+css('table', 'border', '1px solid #aaa').
+css('table, article h2', 'border-left-width', '4px').
+css('table', 'max-width', '100%').
+%css('table', 'min-width', '20em').
+%css('table', 'padding', '.5em').
+css('td', 'padding', '0 .5rem').
+css('body', 'display', flex).
+css('body', 'font-family', ["univers lt pro", helvetica, 'sans-serif']).
+css('body', 'font-size', '16px').
+css('body', 'line-height', '22px').
+css('body', 'padding', '10px 22px').
+css('body', 'gap', '1em').
 css('h1, h2', 'font-size', inherit).
 css('h1, h2', 'font-weight', normal).
-css(section, display, flex).
-css(section, 'flex-wrap', wrap).
-css(section, gap, '1em').
-css('[lang]', opacity, 0.8).
-css(a, 'text-decoration', none).
-%css(a, 'border-bottom', '1px solid #0005').
-css('td:nth-child(1)', 'text-align', right).
-css('td:nth-child(1)', 'vertical-align', top).
-css('td:nth-child(1)', 'padding-right', '.5em').
-css('td:nth-child(1)', 'white-space', nowrap).
-css('td:nth-child(2)', 'vertical-align', top).
+css('pre, tt', 'font-family', ["berkeley mono", monospace]).
+css('section', 'display', flex).
+css('section', 'gap', '1em').
 css('td > p:first-child', 'margin-top', 0).
 css('td > p:last-child', 'margin-bottom', 0).
+css('td:nth-child(1)', 'padding-right', '.5em').
+css('td:nth-child(1)', 'text-align', right).
+css('td:nth-child(1)', 'vertical-align', top).
+css('td:nth-child(1)', 'white-space', nowrap).
+css('td:nth-child(2)', 'vertical-align', top).
+css('.prefix', 'opacity', 0.6).
+css('.colon', 'opacity', 0.4).
+css('.local', 'opacity', 0.8).
 
-css('[data-prefix=nt]', 'font-style', italic).
+css('table[id^="_:"]', 'border-width', '1px 3px').
+css('table[id^="_:"]', 'border-radius', '10px').
+css('table[id^="_:"]', 'background-color', 'rgba(0,0,0,0.02)').
 
 style -->
     { findall(Line, css_line(Line), Lines) },
     html(style(Lines)).
 
+% relevant(X) :- rdf(X, rdf:type, _, nt:graph).
+relevant(X) :-
+    rdf_resource(X),
+    \+ rdf_is_bnode(X),
+    rdf(X, rdf:type, _, 'http://www.w3.org/ns/activitystreams').
+
 description(Subject, Pairs) :-
-    rdf_resource(Subject),
-    (rdf(Subject, _, _, nt:graph) -> true),
     findall(P-O, rdf(Subject, P, O), Pairs0),
     keysort(Pairs0, Pairs).
 
 descriptions(Descriptions) :-
     findall(Subject-Pairs,
-            description(Subject, Pairs),
+            (relevant(Subject),
+             description(Subject, Pairs)),
             Descriptions0),
     keysort(Descriptions0, Descriptions).
 
 graph_view -->
         { descriptions(Descriptions) },
-        html(section(\description_tables(Descriptions))).
+        html(section(
+                 \description_tables(Descriptions))).
 
 :- rdf_meta show(t, ?, ?).
 
 properties([]) --> [].
 properties([P-O|T]) -->
-        html(tr([td(\show(P)),
-                 td(\show(O))])),
-        properties(T).
+    html(tr([td(\show(P)),
+             td(\show(O))])),
+    properties(T).
+
+description_table(Subject, Pairs) -->
+    { anchor(Subject, Anchor, Prefix:Local) },
+    html(
+        article(
+            [\heading(Prefix, Local),
+             table(
+                [id(Anchor)],
+                \properties(Pairs))])).
+
+heading('_', _Local) --> !, html([]).
+
+heading(Prefix, Local) -->
+    html(h2(\show(Prefix:Local))).
 
 description_tables([]) --> [].
 description_tables([Subject-Pairs|T]) -->
-    { anchor(Subject, Anchor) },
-    html(
-        article(
-            [id(Anchor)],
-            [h2("~w"-Anchor),
-             table(\properties(Pairs))])),
+    description_table(Subject, Pairs),
     description_tables(T).
-    
+
 show(X^^'http://www.w3.org/2001/XMLSchema#string') -->
-    !, html(span(X)).
+    html(span(X)).
 
 show(X^^'http://www.w3.org/2001/XMLSchema#anyURI') -->
-    !, html(a([href(X)], X)).
+    html(a([href(X)], X)).
 
 show(X^^'https://node.town/json') -->
-    !, html(details([summary("JSON"), pre(X)])).
+    html(details([summary("JSON"), pre(X)])).
 
 show(X^^'https://node.town/markdown') -->
     { md_parse_string(X, DOM), ! },
@@ -195,18 +224,31 @@ show(date(Y,M,D)^^_) -->
 show(date_time(Y,M,D,H,Min,S,Offset)^^_) -->
     html(span("~w-~w-~w ~w:~w:~w ~w"-[Y,M,D,H,Min,S,Offset])).
 
-show(X) -->
-    { atom(X),
-      rdf_resource(X),
-      rdf_global_id(Prefix:Local, X),
-      % rdf(X, rdfs:label, Label),
-      anchor_href(X, Href) },
-    html(a([href(Href), 'data-prefix'(Prefix)],
-           [Prefix, ":", Local])).
+show('_':Local) -->
+    html(span([span(class(colon), ':'),
+               span(class(local), Local)])).
+
+show(Prefix:Local) -->
+    { rdf_global_id(Prefix:Local, Atom) },
+    show(Atom),
+    !.
 
 show(X) -->
-    { atom(X), rdf_resource(X) },
-    html(a(href(X), X)).
+    { atom(X),
+      \+ rdf_is_bnode(X),
+      rdf_resource(X),
+      anchor_href(X, Href, Prefix:Name) },
+    html(a([href(Href), 'data-prefix'(Prefix)],
+           [span(class(prefix), Prefix),
+            span(class(colon), :),
+            span(class(local), Name)])).
+
+% render bnodes inline recursively
+show(X) -->
+    { atom(X),
+      rdf_is_bnode(X),
+      description(X, Pairs) },
+    description_table(X, Pairs).
 
 show(X) -->
     { atom(X) },
@@ -216,10 +258,16 @@ show(@(X, Lang)) -->
     { string(X), atom(Lang) },
     html(span([lang(Lang)], X)).
 
-anchor(X, Href) :-
+anchor(X, Id, Prefix:Local) :-
+    \+ rdf_is_bnode(X),
     rdf_global_id(Prefix:Local, X),
-    format(atom(Href), "~w:~w", [Prefix, Local]).
+    format(atom(Id), "~w:~w", [Prefix, Local]).
 
-anchor_href(X, Href) :-
-    anchor(X, Local),
-    format(atom(Href), "#~w", [Local]).
+anchor(X, Id, '_':Local) :-
+    rdf_is_bnode(X),
+    atom_concat('_:', Local, X),
+    format(atom(Id), "_:~w", [Local]).
+
+anchor_href(X, Href, Prefix:Local) :-
+    anchor(X, Id, Prefix:Local),
+    format(atom(Href), "#~w", [Id]).
