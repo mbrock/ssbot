@@ -88,6 +88,8 @@ in {
     screen
     sqlite
 
+    esbuild
+
 #    datasette
 #    litestream
 #    pandoc
@@ -182,6 +184,8 @@ in {
 #    export TERMINUSDB_CONTAINER=terminusdb
     export TERMINUSDB_SERVER_IP=0.0.0.0
     export TERMINUSDB_AUTOLOGIN_ENABLED=false
+
+    export VAULT_ADDR=http://hamlet:8200/
 
     jq < ${devcontainer-config} \
        > ${config.env.DEVENV_ROOT}/.devcontainer.json

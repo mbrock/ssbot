@@ -1,2 +1,7 @@
-:- pack_install(sweet).
-:- pack_install(spawn).
+need(sweet).
+need(spawn).
+need(markdown).
+need(mqtt).
+need(openapi).
+
+:- forall(need(N), pack_install(N)).
