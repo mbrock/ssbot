@@ -113,7 +113,7 @@ css(article, border, '1px solid #aaa').
 css(article, 'box-shadow', '-4px 0px 0 0 #aaa').
 css(article, padding, '.5em').
 css(article, 'max-width', '36em').
-
+css(article, 'min-width', '20em').
 css('article > h2', margin, 0).
 css('article > h2', 'margin-bottom', '.5em').
 css('h1, h2', 'font-size', inherit).
