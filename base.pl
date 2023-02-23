@@ -37,17 +37,19 @@ open(Database) :-
     rdf_attach_db(
        user_app_data(Filename),
        [access(read_write)]),
-    format('I attached ~t.~n', [Filename]).
+    format('attached ~w~n', [Filename]).
+
+:- open(nodetown).
 
 load :-
      rdf_attach_library(
        nodetown("vocabs/void.ttl")),
- rdf_load_library(activitystreams),
- rdf_load_library(internet),
- rdf_load_library(rdf),
- rdf_load_library(rdfs),
- rdf_load_library(owl),
- rdf_load_library(dc).
+     rdf_load_library(activitystreams),
+     rdf_load_library(internet),
+     rdf_load_library(rdf),
+     rdf_load_library(rdfs),
+     rdf_load_library(owl),
+     rdf_load_library(dc).
 
 graph_url('https://node.town/graph').
 

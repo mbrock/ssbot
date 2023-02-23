@@ -43,6 +43,10 @@ nt:html a owl:Datatype ;
     rdfs:comment "An HTML snippet"@en ;
     owl:equivalentClass schema:Text .
 
+nt:Context a owl:Class ;
+    rdfs:label "Context"@en ;
+    rdfs:comment "A context is a relevance scope."@en ;
+    rdfs:subClassOf as:Collection .
 
 #
 # Section 2. Software, systems, code, modules, etc.

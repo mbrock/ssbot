@@ -43,3 +43,6 @@ webSocket.onerror = event => {
   console.log("WebSocket error", event)
 }
 
+function onTelegramAuth(user) {
+  webSocket.send(JSON.stringify(["auth", "telegram", user]))
+}

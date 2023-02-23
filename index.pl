@@ -78,12 +78,9 @@ session(Context) :-
 graph(html, _Request) :-
     session(Context),
     know(Context, nt:action, nt:'login/telegram'),
+    deny(nt:'login/telegram', as:content, _),
     know(nt:'login/telegram', as:content,
-        """<script async src=https://telegram.org/js/telegram-widget.js?21
-             data-telegram-login=nodetownbot
-             data-size=small data-radius=4
-             data-onauth='onTelegramAuth(user)'
-             data-request-access=write></script>"""^^nt:html),
+        "<script async src=https://telegram.org/js/telegram-widget.js?21 data-telegram-login=nodetownbot data-size=small data-radius=4 data-onauth='onTelegramAuth(user)' data-request-access=write></script>"^^nt:html),
     reply_html_page(
         [ title('node.town'),
           link([rel(stylesheet),
@@ -103,15 +100,6 @@ graph(ttl, _Request) :-
     graph_url(G),
     turtle(current_output, G).
 
-telegram_widget(Bot) -->
-    html(script([async,
-                 src('https://telegram.org/js/telegram-widget.js?21'),
-                 'data-telegram-login'(Bot),
-                 'data-size'('small'),
-                 'data-radius'('4'),
-                 'data-onauth'('onTelegramAuth(user)'),
-                 'data-request-access'('write')], [])).
-
 html_string(HTML, String) :-
     phrase(HTML, Tokens),
     with_output_to(string(String),
@@ -120,6 +108,7 @@ html_string(HTML, String) :-
 relevant(C, C) :- !.
 relevant(C, X) :-
     rdf_object(X),
+    \+ rdf(X, nt:closed, true^^xsd:boolean),
     rdf(C, _, X), !.
 
 relevant(C, X) :-
@@ -224,13 +213,6 @@ site :-
     rdf_create_graph(G),
     rdf_default_graph(_, G),
 
-    (   open(a)
-    ->  true
-    ;   open(b)
-    ->  true
-    ;   open(c)
-    ),
-
     load,
 
     (   site(4000)
@@ -294,6 +276,9 @@ show(X^^'http://www.w3.org/2001/XMLSchema#string') -->
 show(X^^'http://www.w3.org/2001/XMLSchema#anyURI') -->
     html(a([href(X)], X)).
 
+show(true^^'http://www.w3.org/2001/XMLSchema#boolean') -->
+    html(span('true')).
+
 show(X^^'https://node.town/json') -->
     html(details([summary("JSON"), pre(X)])).
 
@@ -302,7 +287,8 @@ show(X^^'https://node.town/markdown') -->
     html(DOM).
 
 show(X^^'https://node.town/html') -->
-    [X].
+    { format(atom(Atom), '~w', [X]) },
+    [Atom].
 
 show(X^^_) -->
     { number(X) },
