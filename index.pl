@@ -92,12 +92,23 @@ site :-
     rdf_create_graph(G),
     rdf_default_graph(_, G),
 
-    catch((http_stop_server(4000, []),
-           writeln('% nt: stopped server')),
+    (   site(4000)
+    ->  true
+    ;   site(4001)
+    ->  true
+    ).
+
+site(Port) :-
+    catch((http_stop_server(Port, []),
+           format('% nt: stopped my server on port ~w~n', [Port])),
           error(existence_error(http_server, _), _),
           writeln('% no server running')),
-
-    http_server(http_dispatch, [port(4000)]).
+    
+    catch((http_server(http_dispatch, [port(Port)]),
+           format('% nt: started server on port ~w~n', [Port])),
+          error(socket_error(eaddrinuse, _), _),
+          (format('% nt: tcp port conflict ~w~n', [Port]),
+           fail)).
 
 graph(html, _Request) :-
     reply_html_page(
