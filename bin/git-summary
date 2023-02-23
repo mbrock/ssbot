@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/nix/store/4xw8n979xpivdc46a9ndcvyhwgif00hz-bash-5.1-p16/bin/bash
 echo -n "<`whoami`> "
 if test `git status --short | wc -l` = 1
 then echo `git status --short` `git shortstat | sed 's,1 file changed ,,'`
