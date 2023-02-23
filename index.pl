@@ -1,7 +1,9 @@
 :- module(nt,
           [ graph/2,
             site/0,
-            dial/0
+            dial/0,
+            static/2,
+            recv_answers/2
           ]).
 
 :- reexport(otp).
@@ -29,12 +31,13 @@
 :- http_handler(root(.), graph(html), []).
 :- http_handler(root(graph), graph(ttl), []).
 
-:- shell('cd web && npm run esbuild').
+% :- shell('cd web && npm run esbuild').
 
-:- http_handler(root('index.js'),
-                http_reply_file('web/dist/index.js', []), []).
-:- http_handler(root('index.js.map'),
-                http_reply_file('web/dist/index.js.map', []), []).
+static(Path, File) :-
+    http_handler(root(Path), http_reply_file(File, []), []).
+
+:- static('index.js', 'web/index.js').
+:- static('tau-prolog.js', 'web/tau-prolog.js').
 
 :- use_module(library(http/websocket)).
 
@@ -42,12 +45,43 @@
                 http_upgrade_to_websocket(talk, []),
                 [spawn([])]).
 
+:- use_module(library(chan)).
+
+:- dynamic socket/2.
+
 talk(WebSocket) :-
     mint(url(Id)),
     know(Id, rdf:type, nt:'WebSocket'),
-    spin(talk(Id, recv), talk(recv, Id, WebSocket)),
-    spin(talk(Id, send), talk(send, Id, WebSocket)),
-    wipe(talk(Id, _)).
+    assert(socket(Id, WebSocket)).
+
+tell(Id, Term) :-
+    socket(Id, WebSocket),
+    with_output_to(
+        string(String),
+        write_term(Term, [quoted(true)])),
+    mint(url(ReqId)),
+    know(ReqId, rdf:type, nt:'WebSocketRequest'),
+    know(ReqId, nt:socket, Id),
+    know(ReqId, nt:term, String),
+    ws_send(WebSocket,
+            json{ type: query,
+                  id: ReqId,
+                  goal: String}),
+    
+    recv_answers(WebSocket, ReqId).
+
+recv_answers(WebSocket, ReqId) :-
+    ws_receive(WebSocket, Data, [format(json)]),
+    (   _{ id: ReqId, done: true } :< Data.data
+    ->  true
+    ;   _{ id: ReqId, answer: Answer } :< Data.data
+    ->  write_term(Answer, [quoted(true)]), nl,
+        recv_answers(WebSocket, ReqId)
+    ;   _{ id: ReqId, error: Error } :< Data.data
+    ->  throw(error(Error))
+    ).
+
+    
 
 talk(recv, Id, WebSocket) :-
     ws_receive(WebSocket, Message, [format(json)]),
@@ -117,6 +151,7 @@ graph(html, _Request) :-
                 href('https://font.node.town/index.css')]),
           link([rel(stylesheet),
                 href('https://fonts.cdnfonts.com/css/univers-lt-pro')]),
+          script([src('tau-prolog.js')], []),
           script([src('index.js'), async], []),
           \style
         ],
@@ -223,7 +258,9 @@ style -->
 relevant(X) :-
     rdf_resource(X),
     \+ rdf_is_bnode(X),
-    rdf(X, rdf:type, _, 'http://www.w3.org/ns/activitystreams').
+    ( rdf(X, rdf:type, _, nt:graph)
+    ; rdf(X, rdf:type, _, nt:'')
+    ).
 
 description(Subject, Pairs) :-
     findall(P-O, rdf(Subject, P, O), Pairs0),
