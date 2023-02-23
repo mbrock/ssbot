@@ -3,7 +3,8 @@
             site/0,
             dial/0,
             static/2,
-            recv_answers/2
+            recv_answers/2,
+            stop/0
           ]).
 
 :- reexport(otp).
@@ -23,6 +24,7 @@
 :- use_module(library(http/html_write)).
 :- use_module(library(http/json), [json_read_dict/2]).
 :- use_module(library(http/http_dispatch)).
+:- use_module(library(http/http_error)).
 
 :- use_module(library(pengines), []).
 
@@ -42,17 +44,115 @@ static(Path, File) :-
 :- use_module(library(http/websocket)).
 
 :- http_handler(root(websocket),
-                http_upgrade_to_websocket(talk, []),
+                websocket,
                 [spawn([])]).
 
 :- use_module(library(chan)).
 
+:- use_module(library(http/http_session)).
+
 :- dynamic socket/2.
 
-talk(WebSocket) :-
+:- http_set_session_options(
+       [timeout(0),
+        cookie(nodetown),
+        proxy_enabled(true)]).
+
+websocket(Request) :-
+    session(Context),
+    http_upgrade_to_websocket(talk(Context), [], Request).
+
+context(session(Session), Context) :-
+    rdf(Context, nt:sessionId, Session^^xsd:string),
+    !.
+
+context(session(Session), Context) :-
+    mint(url(Context)),
+    know(Context, rdf:type, nt:'Context'),
+    know(Context, nt:sessionId, Session^^xsd:string).
+
+session(Context) :-
+    http_in_session(Session),
+    context(session(Session), Context).
+
+graph(html, _Request) :-
+    session(Context),
+    know(Context, nt:action, nt:'login/telegram'),
+    know(nt:'login/telegram', as:content,
+        """<script async src=https://telegram.org/js/telegram-widget.js?21
+             data-telegram-login=nodetownbot
+             data-size=small data-radius=4
+             data-onauth='onTelegramAuth(user)'
+             data-request-access=write></script>"""^^nt:html),
+    reply_html_page(
+        [ title('node.town'),
+          link([rel(stylesheet),
+                href('https://font.node.town/index.css')]),
+          link([rel(stylesheet),
+                href('https://fonts.cdnfonts.com/css/univers-lt-pro')]),
+          script([src('tau-prolog.js')], []),
+          script([src('index.js'), async], []),
+          \style
+        ],
+        main([h1('node.town'),
+              \graph_view(Context),
+              div([id(editor), autofocus], [])])).
+
+graph(ttl, _Request) :-
+    format('content-type: text/turtle~n~n'),
+    graph_url(G),
+    turtle(current_output, G).
+
+telegram_widget(Bot) -->
+    html(script([async,
+                 src('https://telegram.org/js/telegram-widget.js?21'),
+                 'data-telegram-login'(Bot),
+                 'data-size'('small'),
+                 'data-radius'('4'),
+                 'data-onauth'('onTelegramAuth(user)'),
+                 'data-request-access'('write')], [])).
+
+html_string(HTML, String) :-
+    phrase(HTML, Tokens),
+    with_output_to(string(String),
+                   print_html(Tokens)).
+
+relevant(C, C) :- !.
+relevant(C, X) :-
+    rdf_object(X),
+    rdf(C, _, X), !.
+
+relevant(C, X) :-
+    rdf(C, X, _), !.
+
+look(C, X) :-
+    rdf_resource(X),
+    \+ rdf_is_bnode(X),
+    relevant(C, X).
+
+description(Subject, Pairs) :-
+    findall(P-O, rdf(Subject, P, O), Pairs0),
+    keysort(Pairs0, Pairs).
+
+descriptions(Context, Descriptions) :-
+    findall(Topic-Pairs,
+            (look(Context, Topic),
+             description(Topic, Pairs)),
+            Descriptions0),
+    keysort(Descriptions0, Descriptions).
+
+graph_view(Context) -->
+    { descriptions(Context, Descriptions) },
+    html(section(
+             \description_tables(Descriptions))).
+
+talk(Context, WebSocket) :-
     mint(url(Id)),
     know(Id, rdf:type, nt:'WebSocket'),
-    assert(socket(Id, WebSocket)).
+    know(Context, nt:socket, Id),
+    assertz(socket(Id, WebSocket)),
+    talk(recv, Id, WebSocket),
+    retract(socket(Id, WebSocket)).
 
 tell(Id, Term) :-
     socket(Id, WebSocket),
@@ -64,10 +164,10 @@ tell(Id, Term) :-
     know(ReqId, nt:socket, Id),
     know(ReqId, nt:term, String),
     ws_send(WebSocket,
-            json{ type: query,
-                  id: ReqId,
-                  goal: String}),
-    
+            json(_{ type: query,
+                    id: ReqId,
+                    goal: String})),
+
     recv_answers(WebSocket, ReqId).
 
 recv_answers(WebSocket, ReqId) :-
@@ -80,8 +180,6 @@ recv_answers(WebSocket, ReqId) :-
     ;   _{ id: ReqId, error: Error } :< Data.data
     ->  throw(error(Error))
     ).
-
-    
 
 talk(recv, Id, WebSocket) :-
     ws_receive(WebSocket, Message, [format(json)]),
@@ -126,6 +224,15 @@ site :-
     rdf_create_graph(G),
     rdf_default_graph(_, G),
 
+    (   open(a)
+    ->  true
+    ;   open(b)
+    ->  true
+    ;   open(c)
+    ),
+
+    load,
+
     (   site(4000)
     ->  true
     ;   site(4001)
@@ -137,32 +244,123 @@ site(Port) :-
            format('% nt: stopped my server on port ~w~n', [Port])),
           error(existence_error(http_server, _), _),
           writeln('% no server running')),
-    
+
     catch((http_server(http_dispatch, [port(Port)]),
            format('% nt: started server on port ~w~n', [Port])),
           error(socket_error(eaddrinuse, _), _),
           (format('% nt: tcp port conflict ~w~n', [Port]),
            fail)).
 
-graph(html, _Request) :-
-    reply_html_page(
-        [ title('node.town'),
-          link([rel(stylesheet),
-                href('https://font.node.town/index.css')]),
-          link([rel(stylesheet),
-                href('https://fonts.cdnfonts.com/css/univers-lt-pro')]),
-          script([src('tau-prolog.js')], []),
-          script([src('index.js'), async], []),
-          \style
-        ],
-        main([h1('node.town'),
-              \graph_view,
-              div([id(editor), autofocus], [])])).
+stop(Port) :-
+    catch((http_stop_server(Port, []),
+           format('% nt: stopped my server on port ~w~n', [Port])),
+          error(existence_error(http_server, _), _),
+          true).
 
-graph(ttl, _Request) :-
-    format('content-type: text/turtle~n~n'),
-    graph_url(G),
-    turtle(current_output, G).
+stop :-
+    stop(4000),
+    stop(4001).
+
+:- rdf_meta show(t, ?, ?).
+
+properties([]) --> [].
+properties([P-O|T]) -->
+    html(tr([td(\show(P)),
+             td(\show(O))])),
+    properties(T).
+
+description_table(Subject, Pairs) -->
+    { anchor(Subject, Anchor, Prefix:Local) },
+    html(
+        article(
+            [\heading(Prefix, Local),
+             table(
+                [id(Anchor)],
+                \properties(Pairs))])).
+
+heading('_', _Local) --> !, html([]).
+
+heading(Prefix, Local) -->
+    html(h2(\show(Prefix:Local))).
+
+description_tables([]) --> [].
+description_tables([Subject-Pairs|T]) -->
+    description_table(Subject, Pairs),
+    description_tables(T).
+
+show(X^^'http://www.w3.org/2001/XMLSchema#string') -->
+    html(span(X)).
+
+show(X^^'http://www.w3.org/2001/XMLSchema#anyURI') -->
+    html(a([href(X)], X)).
+
+show(X^^'https://node.town/json') -->
+    html(details([summary("JSON"), pre(X)])).
+
+show(X^^'https://node.town/markdown') -->
+    { md_parse_string(X, DOM), ! },
+    html(DOM).
+
+show(X^^'https://node.town/html') -->
+    [X].
+
+show(X^^_) -->
+    { number(X) },
+    html(tt(X)).
+
+show(date(Y,M,D)^^_) -->
+    html(span("~w-~w-~w"-[Y,M,D])).
+
+show(date_time(Y,M,D,H,Min,S,Offset)^^_) -->
+    html(span("~w-~w-~w ~w:~w:~w ~w"-[Y,M,D,H,Min,S,Offset])).
+
+show('_':Local) -->
+    html(span([span(class(colon), ':'),
+               span(class(local), Local)])).
+
+show(Prefix:Local) -->
+    { rdf_global_id(Prefix:Local, Atom) },
+    show(Atom),
+    !.
+
+show(X) -->
+    { atom(X),
+      \+ rdf_is_bnode(X),
+      rdf_resource(X),
+      anchor_href(X, Href, Prefix:Name) },
+    html(a([href(Href), 'data-prefix'(Prefix)],
+           [span(class(prefix), Prefix),
+            span(class(colon), :),
+            span(class(local), Name)])).
+
+% render bnodes inline recursively
+show(X) -->
+    { atom(X),
+      rdf_is_bnode(X),
+      description(X, Pairs) },
+    description_table(X, Pairs).
+
+show(X) -->
+    { atom(X) },
+    html(span(X)).
+
+show(@(X, Lang)) -->
+    { string(X), atom(Lang) },
+    html(span([lang(Lang)], X)).
+
+anchor(X, Id, Prefix:Local) :-
+    \+ rdf_is_bnode(X),
+    rdf_global_id(Prefix:Local, X),
+    format(atom(Id), "~w:~w", [Prefix, Local]).
+
+anchor(X, Id, '_':Local) :-
+    rdf_is_bnode(X),
+    atom_concat('_:', Local, X),
+    format(atom(Id), "_:~w", [Local]).
+
+anchor_href(X, Href, Prefix:Local) :-
+    anchor(X, Id, Prefix:Local),
+    format(atom(Href), "#~w", [Id]).
 
 css_line(Selector, Property, Value, Line) :-
     css_value(Value, Value1),
@@ -254,124 +452,15 @@ style -->
     { findall(Line, css_line(Line), Lines) },
     html(style(Lines)).
 
-% relevant(X) :- rdf(X, rdf:type, _, nt:graph).
-relevant(X) :-
-    rdf_resource(X),
-    \+ rdf_is_bnode(X),
-    ( rdf(X, rdf:type, _, nt:graph)
-    ; rdf(X, rdf:type, _, nt:'')
-    ).
 
-description(Subject, Pairs) :-
-    findall(P-O, rdf(Subject, P, O), Pairs0),
-    keysort(Pairs0, Pairs).
 
-descriptions(Descriptions) :-
-    findall(Subject-Pairs,
-            (relevant(Subject),
-             description(Subject, Pairs)),
-            Descriptions0),
-    keysort(Descriptions0, Descriptions).
 
-graph_view -->
-        { descriptions(Descriptions) },
-        html(section(
-                 \description_tables(Descriptions))).
 
-:- rdf_meta show(t, ?, ?).
 
-properties([]) --> [].
-properties([P-O|T]) -->
-    html(tr([td(\show(P)),
-             td(\show(O))])),
-    properties(T).
 
-description_table(Subject, Pairs) -->
-    { anchor(Subject, Anchor, Prefix:Local) },
-    html(
-        article(
-            [\heading(Prefix, Local),
-             table(
-                [id(Anchor)],
-                \properties(Pairs))])).
 
-heading('_', _Local) --> !, html([]).
 
-heading(Prefix, Local) -->
-    html(h2(\show(Prefix:Local))).
 
-description_tables([]) --> [].
-description_tables([Subject-Pairs|T]) -->
-    description_table(Subject, Pairs),
-    description_tables(T).
 
-show(X^^'http://www.w3.org/2001/XMLSchema#string') -->
-    html(span(X)).
 
-show(X^^'http://www.w3.org/2001/XMLSchema#anyURI') -->
-    html(a([href(X)], X)).
 
-show(X^^'https://node.town/json') -->
-    html(details([summary("JSON"), pre(X)])).
-
-show(X^^'https://node.town/markdown') -->
-    { md_parse_string(X, DOM), ! },
-    html(DOM).
-
-show(X^^_) -->
-    { number(X) },
-    html(tt(X)).
-
-show(date(Y,M,D)^^_) -->
-    html(span("~w-~w-~w"-[Y,M,D])).
-
-show(date_time(Y,M,D,H,Min,S,Offset)^^_) -->
-    html(span("~w-~w-~w ~w:~w:~w ~w"-[Y,M,D,H,Min,S,Offset])).
-
-show('_':Local) -->
-    html(span([span(class(colon), ':'),
-               span(class(local), Local)])).
-
-show(Prefix:Local) -->
-    { rdf_global_id(Prefix:Local, Atom) },
-    show(Atom),
-    !.
-
-show(X) -->
-    { atom(X),
-      \+ rdf_is_bnode(X),
-      rdf_resource(X),
-      anchor_href(X, Href, Prefix:Name) },
-    html(a([href(Href), 'data-prefix'(Prefix)],
-           [span(class(prefix), Prefix),
-            span(class(colon), :),
-            span(class(local), Name)])).
-
-% render bnodes inline recursively
-show(X) -->
-    { atom(X),
-      rdf_is_bnode(X),
-      description(X, Pairs) },
-    description_table(X, Pairs).
-
-show(X) -->
-    { atom(X) },
-    html(span(X)).
-
-show(@(X, Lang)) -->
-    { string(X), atom(Lang) },
-    html(span([lang(Lang)], X)).
-
-anchor(X, Id, Prefix:Local) :-
-    \+ rdf_is_bnode(X),
-    rdf_global_id(Prefix:Local, X),
-    format(atom(Id), "~w:~w", [Prefix, Local]).
-
-anchor(X, Id, '_':Local) :-
-    rdf_is_bnode(X),
-    atom_concat('_:', Local, X),
-    format(atom(Id), "_:~w", [Local]).
-
-anchor_href(X, Href, Prefix:Local) :-
-    anchor(X, Id, Prefix:Local),
-    format(atom(Href), "#~w", [Id]).

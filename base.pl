@@ -9,7 +9,9 @@
             sync/1,
             graph_url/1,
             mint/1,
-            turn/2
+            turn/2,
+            open/1,
+            load/0
           ]).
 
 :- use_module(library(semweb/rdf11)).
@@ -30,18 +32,22 @@
 :- prolog_load_context(directory, Dir),
    asserta(user:file_search_path(nodetown, Dir)).
 
-:- rdf_attach_db(
-       user_app_data("nodetown.rdf.db"),
-       [access(read_write)]).
+open(Database) :-
+    format(atom(Filename), "~w.rdf.db", [Database]),
+    rdf_attach_db(
+       user_app_data(Filename),
+       [access(read_write)]),
+    format('I attached ~t.~n', [Filename]).
 
-:- rdf_attach_library(
-       nodetown("vocabs/void.ttl")).
-:- rdf_load_library(activitystreams).
-:- rdf_load_library(internet).
-:- rdf_load_library(rdf).
-:- rdf_load_library(rdfs).
-:- rdf_load_library(owl).
-:- rdf_load_library(dc).
+load :-
+     rdf_attach_library(
+       nodetown("vocabs/void.ttl")),
+ rdf_load_library(activitystreams),
+ rdf_load_library(internet),
+ rdf_load_library(rdf),
+ rdf_load_library(rdfs),
+ rdf_load_library(owl),
+ rdf_load_library(dc).
 
 graph_url('https://node.town/graph').
 
@@ -66,7 +72,7 @@ know(S, P, O) :-
     know(S, P, O, G).
 
 know(S, P, O, G) :-
-    spew(S, P, O),
+    % spew(S, P, O),
     rdf_assert(S, P, O, G).
 
 deny :-

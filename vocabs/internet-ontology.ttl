@@ -36,8 +36,13 @@ nt:json a owl:Datatype ;
 nt:markdown a owl:Datatype ;
     rdfs:label "Markdown"@en ;
     rdfs:comment "A Markdown snippet"@en ;
-    owl:equivalentClass schema:Text ;
-    .
+    owl:equivalentClass schema:Text .
+
+nt:html a owl:Datatype ;
+    rdfs:label "HTML"@en ;
+    rdfs:comment "An HTML snippet"@en ;
+    owl:equivalentClass schema:Text .
+
 
 #
 # Section 2. Software, systems, code, modules, etc.
