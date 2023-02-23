@@ -38,7 +38,7 @@
 
 :- use_module(library(http/websocket)).
 
-:- http_handler(root(ws),
+:- http_handler(root(websocket),
                 http_upgrade_to_websocket(talk, []),
                 [spawn([])]).
 
@@ -50,7 +50,7 @@ talk(WebSocket) :-
     wipe(talk(Id, _)).
 
 talk(recv, Id, WebSocket) :-
-    ws_receive(WebSocket, Message, [format(prolog)]),
+    ws_receive(WebSocket, Message, [format(json)]),
     (   Message.opcode == close
     ->  know(Id, nt:closed, true)
     ;   mint(url(MsgId)),
