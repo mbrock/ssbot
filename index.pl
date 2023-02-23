@@ -105,19 +105,23 @@ html_string(HTML, String) :-
     with_output_to(string(String),
                    print_html(Tokens)).
 
-relevant(C, C) :- !.
+relevant(C, C).
 relevant(C, X) :-
-    rdf_object(X),
+    rdf_subject(X),
     \+ rdf(X, nt:closed, true^^xsd:boolean),
     rdf(C, _, X), !.
 
 relevant(C, X) :-
+    rdf_subject(C),
     rdf(C, X, _), !.
+
+salient(C, X) :- relevant(C, X), !.
+salient(C, X) :- relevant(C, Y), relevant(X, Y), !.
 
 look(C, X) :-
     rdf_resource(X),
     \+ rdf_is_bnode(X),
-    relevant(C, X).
+    salient(C, X).
 
 description(Subject, Pairs) :-
     findall(P-O, rdf(Subject, P, O), Pairs0),
@@ -179,11 +183,26 @@ talk(recv, Id, WebSocket) :-
         get_time(TimeStamp),
         know(MsgId, as:time, TimeStamp),
         (   Message.opcode == text
-        ->  know(MsgId, as:content, Message.data)
+        ->  handle_json(Id, MsgId, Message.data)
         ;   true
         ),
         talk(recv, Id, WebSocket)
     ).
+
+handle_json(Id, MsgId, ["auth", "telegram", Data]) :-
+    item(Data, id, number, TelegramUserId),
+    find(User, nt:telegramId, TelegramUserId),
+    item(Data, first_name, string, FirstName),
+    item(Data, last_name, string, LastName),
+    item(Data, photo_url, string, PhotoUrl),
+    item(Data, username, string, Username),
+    format(string(Url), "https://t.me/~w", [Username]),
+    know(User, schema:givenName, FirstName),
+    know(User, schema:familyName, LastName),
+    know(User, schema:image, PhotoUrl^^xsd:anyURI),
+    know(User, schema:url, Url^^xsd:anyURI),
+    rdf(Context, nt:socket, Id),
+    know(Context, nt:auth, User).
 
 info(X) :-
     print_message(informational, X).
@@ -243,12 +262,12 @@ stop :-
     stop(4000),
     stop(4001).
 
-:- rdf_meta show(t, ?, ?).
+:- rdf_meta show(t, t, ?, ?).
 
 properties([]) --> [].
 properties([P-O|T]) -->
-    html(tr([td(\show(P)),
-             td(\show(O))])),
+    html(tr([td(\show(P, nil)),
+             td(\show(O, P))])),
     properties(T).
 
 description_table(Subject, Pairs) -->
@@ -263,53 +282,56 @@ description_table(Subject, Pairs) -->
 heading('_', _Local) --> !, html([]).
 
 heading(Prefix, Local) -->
-    html(h2(\show(Prefix:Local))).
+    html(h2(\show(Prefix:Local, nil))).
 
 description_tables([]) --> [].
 description_tables([Subject-Pairs|T]) -->
     description_table(Subject, Pairs),
     description_tables(T).
 
-show(X^^'http://www.w3.org/2001/XMLSchema#string') -->
+show(X^^'http://www.w3.org/2001/XMLSchema#string', _) -->
     html(span(X)).
 
-show(X^^'http://www.w3.org/2001/XMLSchema#anyURI') -->
+show(X^^'http://www.w3.org/2001/XMLSchema#anyURI', 'https://schema.org/image') -->
+    html(img([src(X)])).
+
+show(X^^'http://www.w3.org/2001/XMLSchema#anyURI', _) -->
     html(a([href(X)], X)).
 
-show(true^^'http://www.w3.org/2001/XMLSchema#boolean') -->
+show(true^^'http://www.w3.org/2001/XMLSchema#boolean', _) -->
     html(span('true')).
 
-show(X^^'https://node.town/json') -->
+show(X^^'https://node.town/json', _) -->
     html(details([summary("JSON"), pre(X)])).
 
-show(X^^'https://node.town/markdown') -->
+show(X^^'https://node.town/markdown', _) -->
     { md_parse_string(X, DOM), ! },
     html(DOM).
 
-show(X^^'https://node.town/html') -->
+show(X^^'https://node.town/html', _) -->
     { format(atom(Atom), '~w', [X]) },
     [Atom].
 
-show(X^^_) -->
+show(X^^_, _) -->
     { number(X) },
     html(tt(X)).
 
-show(date(Y,M,D)^^_) -->
+show(date(Y,M,D)^^_, _) -->
     html(span("~w-~w-~w"-[Y,M,D])).
 
-show(date_time(Y,M,D,H,Min,S,Offset)^^_) -->
+show(date_time(Y,M,D,H,Min,S,Offset)^^_, _) -->
     html(span("~w-~w-~w ~w:~w:~w ~w"-[Y,M,D,H,Min,S,Offset])).
 
-show('_':Local) -->
+show('_':Local, _) -->
     html(span([span(class(colon), ':'),
                span(class(local), Local)])).
 
-show(Prefix:Local) -->
+show(Prefix:Local, _) -->
     { rdf_global_id(Prefix:Local, Atom) },
-    show(Atom),
+    show(Atom, nil),
     !.
 
-show(X) -->
+show(X, _) -->
     { atom(X),
       \+ rdf_is_bnode(X),
       rdf_resource(X),
@@ -320,17 +342,17 @@ show(X) -->
             span(class(local), Name)])).
 
 % render bnodes inline recursively
-show(X) -->
+show(X, _) -->
     { atom(X),
       rdf_is_bnode(X),
       description(X, Pairs) },
     description_table(X, Pairs).
 
-show(X) -->
+show(X, _) -->
     { atom(X) },
     html(span(X)).
 
-show(@(X, Lang)) -->
+show(@(X, Lang), _) -->
     { string(X), atom(Lang) },
     html(span([lang(Lang)], X)).
 
@@ -433,6 +455,14 @@ css('.local', 'opacity', 0.8).
 css('table[id^="_:"]', 'border-width', '1px 3px').
 css('table[id^="_:"]', 'border-radius', '10px').
 css('table[id^="_:"]', 'background-color', 'rgba(0,0,0,0.02)').
+
+
+css('img', 'max-width', '3rem').
+css('img', 'height', 'auto').
+% subtle border, radius, and shadow
+css('img', 'border', '1px solid #aaa').
+css('img', 'border-radius', '0.5rem').
+css('img', 'box-shadow', '0 0 0.5rem rgba(0,0,0,0.1)').
 
 style -->
     { findall(Line, css_line(Line), Lines) },

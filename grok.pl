@@ -1,7 +1,11 @@
 :- module(grok,
           [hear/1, past/2, grok/0, frob/2, frob/0, dull/1,
            cope/1,
-           openapi_to_rdf/2
+           openapi_to_rdf/2,
+           item/4,
+           find/3,
+           link/2,
+           json/2
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -57,12 +61,13 @@ scoped_id(X, ID, Graph, URL) :-
     rdf(URL, Relation, ID, Graph).
 
 link(X, URL) :-
-    (   scoped_id(X, ID, Graph, URL), !,
-        format("Linking ~w (~w) [~w]~n", [URL, ID, Graph])
-    ->  true
-    ;   mint(url(URL))
-    ,   format("Minting ~w~n", [URL])
-    ).
+    scoped_id(X, ID, Graph, URL),
+    !,
+    format("Linking ~w (~w) [~w]~n", [URL, ID, Graph]).
+
+link(X, URL) :-
+    mint(url(URL)),
+    format("Minting ~w~n", [URL]).
 
 find(S, P, O) :-
     (  rdf(S, P, O)
@@ -132,18 +137,18 @@ grok(recv(telegram, X), as:audience, Group) :-
     item(X, message/chat/type, string, "group"),
     item(X, message/chat/id, integer, ChatID),
     item(X, message/chat, is_dict, ChatData),
-    
+
     find(Group, nt:telegramId, ChatID),
     json(Group, ChatData),
 
     know(Group, nt:platform, nt:'Telegram'),
     know(Group, rdf:type, as:'Group').
-    
+
 grok(recv(_, X), nt:jsonPayload, V) :-
     with_output_to(
         string(V),
         json_write_dict(current_output, X, [width(80)])).
-    
+
 grok(recv(discord, _), nt:platform, nt:'Discord').
 
 grok(recv(discord, X), rdf:type, as:'Note') :-
@@ -245,7 +250,7 @@ openapi_path(Path, PathData, API) :-
     know(ID, schema:documentation, DocURL^^xsd:anyURI),
     know(ID, schema:isPartOf, API),
     openapi_request_body(API, PathData, ID).
-    
+
 openapi_request_body(API, PathData, ID) :-
     debug(openapi, 'PathData: ~w', [PathData]),
     ( item(PathData, post/requestBody/content/'application/json'/schema, is_dict, Schema)

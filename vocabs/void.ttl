@@ -10,6 +10,7 @@
 @prefix ontolex: <http://www.w3.org/ns/lemon/ontolex#> .
 @prefix      wn: <http://wordnet-rdf.princeton.edu/> .
 @prefix  schema: <https://schema.org/> .
+@prefix    foaf: <http://xmlns.com/foaf/0.1/> .
 
 @prefix cnt: <http://www.w3.org/2011/content#> .
 @prefix http: <http://www.w3.org/2011/http#> .
@@ -37,6 +38,7 @@
 [ a lib:Namespace ; lib:mnemonic "httpc" ; lib:namespace httpc: ] .
 
 [ a lib:Namespace ; lib:mnemonic "schema" ; lib:namespace schema: ] .
+[ a lib:Namespace ; lib:mnemonic "foaf" ; lib:namespace foaf: ] .
 
 <activitystreams> a void:Dataset ;
   dc:title "Activity Streams 2.0"@en ;
@@ -105,3 +107,8 @@
   dc:title "Schema.org" ;
   lib:source schema: ;
   void:dataDump <schemaorg-current-https.ttl> .
+
+<foaf> a void:Dataset ;
+  dc:title "Friend of a Friend" ;
+  lib:source foaf: ;
+  void:dataDump foaf: .

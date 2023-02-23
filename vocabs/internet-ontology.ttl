@@ -296,3 +296,19 @@ nt:outbox a as:Collection ;
 nt:inbox a as:Collection ;
     as:name "Node.Town Inbox" ;
     as:summary "Inbox of messages from the outside world."@en .
+
+nt:action a owl:ObjectProperty ;
+    rdfs:domain as:Object ;
+    rdfs:range as:Activity .
+
+nt:auth a owl:ObjectProperty ;
+    rdfs:domain as:Object ;
+    rdfs:range as:Object .
+
+nt:sessionId a owl:DatatypeProperty ;
+    rdfs:domain as:Object ;
+    rdfs:range xsd:string .
+
+nt:socket a owl:DatatypeProperty ;
+    rdfs:domain as:Object ;
+    rdfs:range as:Object .

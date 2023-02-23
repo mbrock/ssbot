@@ -20,6 +20,7 @@
 :- use_module(library(semweb/rdf_library)).
 :- use_module(library(semweb/rdf_portray), []).
 :- use_module(library(semweb/turtle)).
+:- use_module(library(semweb/rdfa)).
 :- use_module(library(semweb/rdf_ntriples), []).
 :- use_module(library(semweb/rdf_http_plugin)).
 :- use_module(library(semweb/rdf_zlib_plugin)).
@@ -49,7 +50,9 @@ load :-
      rdf_load_library(rdf),
      rdf_load_library(rdfs),
      rdf_load_library(owl),
-     rdf_load_library(dc).
+     rdf_load_library(dc),
+     rdf_load_library(schema),
+     rdf_load_library(foaf).
 
 graph_url('https://node.town/graph').
 
