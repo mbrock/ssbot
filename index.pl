@@ -333,31 +333,24 @@ site :-
     ->  true
     ).
 
-:- dynamic saga/1.
-:- dynamic saga/2.
+:- dynamic sung/1.
 
-sing(transaction(begin(0), Id)) :-
-    debug(sing, 'saga + (~w)', [Id]),
-    assertz(saga(Id)).
-sing(transaction(end(0), Id)) :-
-    debug(sing, 'saga - (~w)', [Id]),
-    % gather all the changes into a dict with subjects as keys
-    % and sorted lists of predicates and objects as values
-    findall(S-Change,
-            (   saga(Id, rdf(S, P, O, _)),
-                Change = P-O),
+sing(transaction(end(0), _)) :-
+    findall(S-(P-O),
+            sung(rdf(S, P, O, _)),
             Changes),
+
+    retractall(sung(_)),
+    debug(sing, 'keys ~p~n', [Changes]),
     keysort(Changes, Sorted),
-    
     group_pairs_by_key(Sorted, Grouped),
     dict_create(Dict, rdf, Grouped),
-    spew(Dict),
+    spew(Dict).
 
-    retractall(saga(Id)).
 sing(assert(S, P, O, G)) :-
-    saga(Id),
-    debug(sing, 'Assert ~w ~w ~w ~w', [S, P, O, G]),
-    assertz(saga(Id, rdf(S, P, O, G))).
+    debug(sing, 'Assert ~p', [S]),
+    assertz(sung(rdf(S, P, O, G))).
+
 sing(retract(S, P, O, G)) :-
     debug(sing, 'Retract ~w ~w ~w ~w', [S, P, O, G]).
 

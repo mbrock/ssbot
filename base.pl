@@ -74,6 +74,7 @@ sync(X) :-
        spew(r, r, o),
        spew(r, r, o, +),
        spew(r, o),
+       spew(r),
        know(r, r, o),
        know(r, r, o, +),
        deny(r, r, o),
@@ -97,10 +98,18 @@ spew(X) :-
 spew(X) :-
     is_dict(X),
     dict_pairs(X, _, Pairs),
-    foreach(member(Subject, Pairs),
+    foreach(member(Subject-Attrs, Pairs),
             (spew(Subject),
-             nl,
-             spew(Pairs))).
+             nl(user_output),
+             spew(Attrs))),
+    nl(user_output).
+
+spew(literal(type(T, X))) :-
+    ansi_format(user_output, [fg(green)], "~w ", [X]),
+    ansi_format(user_output, [fg(blue)], "[~w] ", [T]).
+
+spew(P-O) :-
+    spew(P, O).
 
 spew(S, P, O) :-
     spew(S),
@@ -113,10 +122,10 @@ spew(S, P, O, G) :-
     spew(S, P, O).
 
 spew(P, O) :-
-    format(user_output, "  :: ", []),
+    format(user_output, "  * ", []),
     spew(P),
     spew(O),
-    format(user_output, " .~n", []).
+    format(user_output, " ~n", []).
 
 know(S, P, O) :-
     graph_url(G),
