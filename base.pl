@@ -11,7 +11,9 @@
             mint/1,
             turn/2,
             open/1,
-            load/0
+            load/0,
+            spew/4,
+            spew/1
           ]).
 
 :- use_module(library(ansi_term), [ansi_format/4]).
@@ -70,6 +72,8 @@ sync(X) :-
 
 :- rdf_meta
        spew(r, r, o),
+       spew(r, r, o, +),
+       spew(r, o),
        know(r, r, o),
        know(r, r, o, +),
        deny(r, r, o),
@@ -82,7 +86,21 @@ spew(X) :-
     ansi_format(user_output, [bold], "~w ", [L]).
 
 spew(X) :-
+    atom(X),
     ansi_format(user_output, [fg(cyan)], "~q ", [X]).
+
+spew(X) :-
+    is_list(X),
+    foreach(member(Predicate-Object, X),
+            spew(Predicate, Object)).
+
+spew(X) :-
+    is_dict(X),
+    dict_pairs(X, _, Pairs),
+    foreach(member(Subject, Pairs),
+            (spew(Subject),
+             nl,
+             spew(Pairs))).
 
 spew(S, P, O) :-
     spew(S),
@@ -94,12 +112,18 @@ spew(S, P, O, G) :-
     ansi_format(user_output, [fg(yellow)], "<~w> ", [G]),
     spew(S, P, O).
 
+spew(P, O) :-
+    format(user_output, "  :: ", []),
+    spew(P),
+    spew(O),
+    format(user_output, " .~n", []).
+
 know(S, P, O) :-
     graph_url(G),
     know(S, P, O, G).
 
 know(S, P, O, G) :-
-    spew(S, P, O, G),
+    % spew(S, P, O, G),
     rdf_assert(S, P, O, G).
 
 deny :-

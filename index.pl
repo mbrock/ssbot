@@ -27,7 +27,7 @@
 :- debug(spin).
 
 :- reexport(library(semweb/rdf11)).
-:- use_module(library(semweb/rdf_db), []).
+:- use_module(library(semweb/rdf_db), [rdf_transaction/1]).
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/html_write)).
@@ -40,8 +40,8 @@
 
 :- use_module(library(md/md_parse), [md_parse_string/2]).
 
-:- http_handler(root(.), graph(html), []).
-:- http_handler(root(graph), graph(ttl), []).
+:- http_handler(root(.), graph(transaction, html), []).
+:- http_handler(root(graph), graph(transaction, ttl), []).
 
 esbuild :-
   shell('cd web && npm run esbuild').
@@ -69,6 +69,10 @@ static(Path, File) :-
         cookie(nodetown),
         proxy_enabled(true)]).
 
+prep :-
+    deny(nt:'login/telegram', as:content, _),
+    know(nt:'login/telegram', as:content, "<script async src=https://telegram.org/js/telegram-widget.js?21 data-telegram-login=riga_ss_bot data-size=small data-radius=4 data-onauth='onTelegramAuth(user)' data-request-access=write></script>"^^nt:html).
+
 websocket(Request) :-
     session(Context),
     http_upgrade_to_websocket(talk(Context), [], Request).
@@ -86,12 +90,12 @@ session(Context) :-
     http_in_session(Session),
     context(session(Session), Context).
 
+graph(transaction, Format, Request) :-
+    rdf_transaction(graph(Format, Request), graph(Format, Request)).
+
 graph(html, Request) :-
     session(Context),
     know(Context, nt:action, nt:'login/telegram'),
-    deny(nt:'login/telegram', as:content, _),
-    know(nt:'login/telegram', as:content,
-        "<script async src=https://telegram.org/js/telegram-widget.js?21 data-telegram-login=riga_ss_bot data-size=small data-radius=4 data-onauth='onTelegramAuth(user)' data-request-access=write></script>"^^nt:html),
     http_parameters(Request,
                     [query(Query, [default('')])]),
     reply_html_page(
@@ -217,9 +221,10 @@ study(Query, Result) :-
     normalize_space(string(Result), Result0).
 
 talk(Context, WebSocket) :-
-    mint(url(Id)),
-    know(Id, rdf:type, nt:'WebSocket'),
-    know(Id, as:context, Context),
+    rdf_transaction(call((mint(url(Id)),
+                          know(Id, rdf:type, nt:'WebSocket'),
+                          know(Id, as:context, Context))),
+                    talk(Context)),
     assertz(socket(Id, WebSocket)),
     talk(recv, Id, WebSocket),
     retract(socket(Id, WebSocket)).
@@ -255,16 +260,19 @@ talk(recv, Id, WebSocket) :-
     ws_receive(WebSocket, Message, [format(json)]),
     (   Message.opcode == close
     ->  know(Id, nt:closed, true)
-    ;   mint(url(MsgId)),
-        debug(web, 'Message: ~p', [Message]),
-        know(MsgId, as:context, Id),
-        get_time(TimeStamp),
-        know(MsgId, as:time, TimeStamp),
-        (   Message.opcode == text
-        ->  handle_json(Id, MsgId, Message.data)
-        ;   true
-        ),
+    ;   rdf_transaction(talk(msg, Id, Message)),
         talk(recv, Id, WebSocket)
+    ).
+
+talk(msg, Id, Message) :-
+    mint(url(MsgId)),
+    debug(web, 'Message: ~p', [Message]),
+    know(MsgId, as:context, Id),
+    get_time(TimeStamp),
+    know(MsgId, as:time, TimeStamp),
+    (   Message.opcode == text
+    ->  handle_json(Id, MsgId, Message.data)
+    ;   true
     ).
 
 handle_json(Id, MsgId, ["query", Query]) :-
@@ -317,11 +325,41 @@ site :-
 
     load,
 
+    rdf_monitor(sing, []),
+
     (   site(4000)
     ->  true
     ;   site(4001)
     ->  true
     ).
+
+:- dynamic saga/1.
+:- dynamic saga/2.
+
+sing(transaction(begin(0), Id)) :-
+    debug(sing, 'saga + (~w)', [Id]),
+    assertz(saga(Id)).
+sing(transaction(end(0), Id)) :-
+    debug(sing, 'saga - (~w)', [Id]),
+    % gather all the changes into a dict with subjects as keys
+    % and sorted lists of predicates and objects as values
+    findall(S-Change,
+            (   saga(Id, rdf(S, P, O, _)),
+                Change = P-O),
+            Changes),
+    keysort(Changes, Sorted),
+    
+    group_pairs_by_key(Sorted, Grouped),
+    dict_create(Dict, rdf, Grouped),
+    spew(Dict),
+
+    retractall(saga(Id)).
+sing(assert(S, P, O, G)) :-
+    saga(Id),
+    debug(sing, 'Assert ~w ~w ~w ~w', [S, P, O, G]),
+    assertz(saga(Id, rdf(S, P, O, G))).
+sing(retract(S, P, O, G)) :-
+    debug(sing, 'Retract ~w ~w ~w ~w', [S, P, O, G]).
 
 site(Port) :-
     catch((http_stop_server(Port, []),
@@ -373,7 +411,7 @@ description_tables([Subject-Pairs|T]) -->
     description_table(Subject, Pairs),
     description_tables(T).
 
-:- table show//2.
+% :- table show//2.
 
 show(X, P) -->
     { rdf(P, nt:secrecy, nt:secret) },

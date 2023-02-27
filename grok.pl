@@ -29,7 +29,7 @@ hear(X) :-
     get_time(Now),
     assert_known_event(X, Now),
     debug(event, "~p", [X]),
-    ignore(grok(X)).
+    ignore(rdf_transaction(grok(X), grok(X))).
 
 %!  frob is multi.
 %
