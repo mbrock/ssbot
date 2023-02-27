@@ -18,6 +18,7 @@ secret_env(spotify, "SPOTIFY_SECRET").
 secret_env(pirate_weather, "PIRATE_WEATHER_API_KEY").
 
 secret(urbion, "n/a").
+secret(qdrant, "n/a").
 
 secret(Name, Secret) :-
     known_secret(Name, Secret).

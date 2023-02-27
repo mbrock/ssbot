@@ -1,7 +1,8 @@
 :- module(apis,
           [ api_post/4
           , api_post/3
-          , api_get/4
+          , api_get/4,
+            api_put/4
           ]).
 
 :- use_module(grok, [hear/1]).
@@ -20,6 +21,7 @@ base_url(openai, "https://api.openai.com/").
 base_url(discord, "https://discord.com/api/v10/").
 base_url(urbion, "http://urbion/epap/").
 base_url(readwise, "https://readwise.io/api/v2/").
+base_url(qdrant, "http://hamlet:6333/").
 
 base_url(telegram, URL) :-
     secret(telegram, Token),
@@ -42,6 +44,8 @@ api_auth(Service, Auth) :-
 user_agent(discord, "DiscordBot (https://node.town, 0.5)").
 user_agent(_, "node.town").
 
+hush(qdrant).
+
 api_post(Service, PathComponents, Body, Result) :-
     atomics_to_string(PathComponents, "/", Path),
     once(api_auth(Service, Auth)),
@@ -51,10 +55,25 @@ api_post(Service, PathComponents, Body, Result) :-
                    [request_header('Authorization'=Auth),
                     request_header('User-Agent'=UserAgent),
                     json_object(dict)])),
-    hear(post(Service, PathComponents, Body)).
+    ( \+ hush(Service) -> 
+      hear(post(Service, PathComponents, Body))
+    ; true ).
 
 api_post(Service, PathComponents, Result) :-
     api_post(Service, PathComponents, json(_{}), Result).
+
+api_put(Service, PathComponents, Body, Result) :-
+    atomics_to_string(PathComponents, "/", Path),
+    once(api_auth(Service, Auth)),
+    api_url(Service, Path, URL),
+    user_agent(Service, UserAgent),
+    once(http_put(URL, Body, Result,
+                  [request_header('Authorization'=Auth),
+                   request_header('User-Agent'=UserAgent),
+                   json_object(dict)])),
+    ( \+ hush(Service) -> 
+      hear(put(Service, PathComponents, Body))
+    ; true ).
 
 api_get(Service, PathComponents, QueryParams, Result) :-
     user_agent(Service, UserAgent),

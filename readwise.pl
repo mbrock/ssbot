@@ -1,9 +1,11 @@
 :- module(readwise,
           [ readwise_item/1
-          , save_readwise_embeddings/0
+          , save_readwise_embeddings/0,
+            save_readwise_event/1,
+            readwise_export/0
           ]).
 
-:- use_module(grok, [hear/1]).
+:- use_module(grok).
 :- use_module(apis).
 :- use_module(openai).
 
@@ -37,6 +39,9 @@ readwise_export_loop(Cursor, Items) :-
 readwise_item(Item) :-
     readwise_export_loop(start, Items),
     member(Item, Items).
+
+readwise_export :-
+    readwise_export_loop(start, _Items).
 
 save_readwise_embeddings :-
     ChunkSize = 25,

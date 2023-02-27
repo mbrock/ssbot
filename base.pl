@@ -14,6 +14,7 @@
             load/0
           ]).
 
+:- use_module(library(ansi_term), [ansi_format/4]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), [(rdf_meta)/1, rdf_load/2]).
 :- use_module(library(semweb/rdf_persistency)).
@@ -42,17 +43,22 @@ open(Database) :-
 
 :- open(nodetown).
 
+% load(Atom, Type) :-
+%     format(atom(Filename), "vocabs/~w.~w", [Atom, Type]),
+%     rdf_load(Path, [graph(Atom)]).
+% 
+% load(Atom) :- load(Atom, ttl).
+
 load :-
-     rdf_attach_library(
-       nodetown("vocabs/void.ttl")),
-     rdf_load_library(activitystreams),
-     rdf_load_library(internet),
-     rdf_load_library(rdf),
-     rdf_load_library(rdfs),
-     rdf_load_library(owl),
-     rdf_load_library(dc),
-     rdf_load_library(schema),
-     rdf_load_library(foaf).
+    rdf_attach_library(nodetown(ontology)),
+    rdf_load_library(activitystreams),
+    rdf_load_library(rdf),
+    rdf_load_library(rdfs),
+    rdf_load_library(owl),
+    rdf_load_library(dc),
+    rdf_load_library(schema),
+    rdf_load_library(foaf),
+    rdf_load_library(vcard).
 
 graph_url('https://node.town/graph').
 
@@ -67,17 +73,31 @@ sync(X) :-
        deny(r, r, o),
        deny(r, r, o, +).
 
+spew(X) :-
+    rdf_global_id(P:L, X),
+    !,
+    ansi_format(user_output, [faint], "~w:", [P]),
+    ansi_format(user_output, [bold], "~w ", [L]).
+
+spew(X) :-
+    ansi_format(user_output, [fg(cyan)], "~q ", [X]).
+
 spew(S, P, O) :-
-    ansi_format([bold], "~w", [S]),
-    ansi_format([faint], " :: ~w :: ", [P]),
-    ansi_format([bold], "~w~n", [O]).
+    spew(S),
+    spew(P),
+    spew(O),
+    format(user_output, " .~n", []).
+
+spew(S, P, O, G) :-
+    ansi_format(user_output, [fg(yellow)], "<~w> ", [G]),
+    spew(S, P, O).
 
 know(S, P, O) :-
     graph_url(G),
     know(S, P, O, G).
 
 know(S, P, O, G) :-
-    % spew(S, P, O),
+    spew(S, P, O, G),
     rdf_assert(S, P, O, G).
 
 deny :-

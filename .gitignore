@@ -12,3 +12,5 @@ devenv.local.nix
 
 /data
 /transient
+
+*.secret.*

@@ -12,6 +12,7 @@
 @prefix bfo: <http://purl.obolibrary.org/bfo/bfo.owl#> .
 @prefix schema: <https://schema.org/> .
 @prefix as: <http://www.w3.org/ns/activitystreams#> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
 
 @prefix nt: <https://node.town/> .
 @prefix code: <https://node.town/code/> .
@@ -165,7 +166,7 @@ nt:gpt3 a as:Collection ;
 # text-ada-001:	Capable of very simple tasks, usually the fastest model in the GPT-3 series, and lowest cost.	2,048 tokens	Up to Oct 2019
 # While Davinci is generally the most capable, the other models can perform certain tasks extremely well with significant speed or cost advantages. For example, Curie can perform many of the same tasks as Davinci, but faster and for 1/10th the cost.
 
-nt:text_davinci_003  a nt:LanguageModel ;
+nt:text_davinci_004  a nt:LanguageModel ;
     as:name "text-davinci-003" ;
     as:partOf nt:gpt3 ;
     as:summary "Most capable GPT-3 model. Can do any task the other models can do, often with higher quality, longer output and better instruction-following. Also supports inserting completions within text."@en ;
@@ -278,6 +279,12 @@ nt:discordId a owl:DatatypeProperty ;
     rdfs:domain as:Object ;
     rdfs:range xsd:integer .
 
+nt:readwiseId a owl:DatatypeProperty ;
+    nt:idScope nt:Readwise ;
+    rdfs:label "Readwise ID" ;
+    rdfs:domain as:Object ;
+    rdfs:range xsd:integer .
+
 nt:payload a owl:DatatypeProperty ;
     rdfs:label "payload" ;
     rdfs:domain as:Object ;
@@ -312,3 +319,19 @@ nt:sessionId a owl:DatatypeProperty ;
 nt:socket a owl:DatatypeProperty ;
     rdfs:domain as:Object ;
     rdfs:range as:Object .
+
+nt:secret a owl:DatatypeProperty ;
+    rdfs:domain as:Object ;
+    rdfs:range nt:Secrecy .
+
+nt:Secrecy a rdfs:Class ;
+    rdfs:label "Secrecy" ;
+    rdfs:comment "A class of secrecy levels."@en .
+
+nt:secret a nt:Secrecy ;
+    rdfs:label "Secret" ;
+    rdfs:comment "Only the owner of the secret knows it."@en .
+
+vcard:street-address nt:secrecy nt:secret .
+vcard:hasTelephone nt:secrecy nt:secret .
+vcard:bday nt:secrecy nt:secret .
