@@ -4,7 +4,8 @@
           , pack_embedding/2
           , known_pack/1,
             relevant_pack/3,
-            git/1
+            git/1,
+            git/2
           ]).
 
 :- use_module(openai).
@@ -53,3 +54,6 @@ git(X) :-
     atomic_list_concat(['git', X], ' ', Command),
     shell(Command).
 
+git(Host, X) :-
+    atomic_list_concat(['ssh', Host, 'git', X], Command),
+    shell(Command).
