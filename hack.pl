@@ -68,7 +68,6 @@ know_all_packs :-
     prolog_pack:query_pack_server(search(""), true(Result), []),
     forall(member(Pack, Result), know_pack(Pack)).
 
-
 git(X) :-
     atomic_list_concat(['git', X], ' ', Command),
     shell(Command).

@@ -320,7 +320,7 @@ nt:socket a owl:DatatypeProperty ;
     rdfs:domain as:Object ;
     rdfs:range as:Object .
 
-nt:secret a owl:DatatypeProperty ;
+nt:secrecy a owl:DatatypeProperty ;
     rdfs:domain as:Object ;
     rdfs:range nt:Secrecy .
 
@@ -335,3 +335,4 @@ nt:secret a nt:Secrecy ;
 vcard:street-address nt:secrecy nt:secret .
 vcard:hasTelephone nt:secrecy nt:secret .
 vcard:bday nt:secrecy nt:secret .
+

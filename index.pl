@@ -157,10 +157,10 @@ look(_, X) :-
 
 % look(_, X) :-
 %     rdf(X, rdf:type, schema:'Quotation').
-    
+
 %look(Context, Topic) :-
 %    relevant(Context, Topic, 1).
-% 
+%
 %look(Context, Topic) :-
 %    relevant(Context, X, 1),
 %    back(X, Topic).
@@ -169,10 +169,10 @@ descriptions(Context, Descriptions) :-
     (   setof(Topic, look(Context, Topic), Topics)
     ->  true
     ;   Topics = []),
-    findall(Topic-Pairs,
-            (member(Topic, Topics),
-             description(Topic, Pairs)),
-            Descriptions0),
+    findnsols(20, Topic-Pairs,
+              (member(Topic, Topics),
+               description(Topic, Pairs)),
+              Descriptions0),
     keysort(Descriptions0, Descriptions1),
     reverse(Descriptions1, Descriptions).
 
@@ -272,7 +272,7 @@ handle_json(Id, MsgId, ["query", Query]) :-
     know(MsgId, as:content, Query),
     tell(Id, format("hello ~w~n", [Query])).
 
-handle_json(Id, MsgId, ["auth", "telegram", Data]) :-
+handle_json(Id, _MsgId, ["auth", "telegram", Data]) :-
     item(Data, id, number, TelegramUserId),
     find(User, nt:telegramId, TelegramUserId),
     item(Data, first_name, string, FirstName),
@@ -373,6 +373,8 @@ description_tables([Subject-Pairs|T]) -->
     description_table(Subject, Pairs),
     description_tables(T).
 
+:- table show//2.
+
 show(X, P) -->
     { rdf(P, nt:secrecy, nt:secret) },
     !,
@@ -456,10 +458,12 @@ show(X, Y) -->
     { debug(web, 'show(~w, ~w)~n', [X, Y]) },
     html(span('~w (~w)'-[X, Y])).
 
+:- table anchor/3.
+
 anchor(X, Id, Prefix:Local) :-
     \+ rdf_is_bnode(X),
-    rdf_global_id(Prefix:Local, X),
-    format(atom(Id), "~w:~w", [Prefix, Local]).
+    Id = X,
+    rdf_global_id(Prefix:Local, X).
 
 anchor(X, Id, '_':Local) :-
     rdf_is_bnode(X),
@@ -468,7 +472,7 @@ anchor(X, Id, '_':Local) :-
 
 anchor_href(X, Href, Prefix:Local) :-
     anchor(X, Id, Prefix:Local),
-    format(atom(Href), "#~w", [Id]).
+    atom_concat('#', Id, Href).
 
 css_line(Selector, Property, Value, Line) :-
     css_value(Value, Value1),

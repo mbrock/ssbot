@@ -25,8 +25,6 @@
 @prefix yacht: <http://yacht:4000/> .
 @prefix hamlet: <http://hamlet:4000/> .
 
-@base <https://node.town/rdf/> .
-
 [ a lib:Namespace ; lib:mnemonic "nt" ; lib:namespace nt: ] .
 [ a lib:Namespace ; lib:mnemonic "id" ; lib:namespace id: ] .
 
@@ -48,7 +46,7 @@
 <activitystreams> a void:Dataset ;
     dc:title "Activity Streams 2.0"@en ;
     lib:source as: ;
-    void:dataDump <file:///nt/ontology/activitystreams.ttl> .
+    void:dataDump <activitystreams.ttl> .
 
 <cnt> a void:Dataset ;
     dc:title "Content Vocabulary"@en ;
@@ -77,37 +75,37 @@
 
 <nt> a void:Dataset ;
     dc:title "Internet Ontology Very Good 2.0" ;
-    void:dataDump <file:///nt/ontology/nt.ttl> .
+    void:dataDump <nt.ttl> .
 
 <rdfs> a void:Dataset ;
     dc:title "RDF Schema" ;
     lib:source rdfs: ;
-    void:dataDump <file:///nt/ontology/rdfs.ttl> .
+    void:dataDump <rdfs.ttl> .
 
 <rdf> a void:Dataset ;
     dc:title "RDF" ;
     lib:source rdf: ;
-    void:dataDump <file:///nt/ontology/rdf.ttl> .
+    void:dataDump <rdf.ttl> .
 
 <owl> a void:Dataset ;
     dc:title "OWL" ;
     lib:source owl: ;
-    void:dataDump <file:///nt/ontology/owl.ttl> .
+    void:dataDump <owl.ttl> .
 
 <dc> a void:Dataset ;
     dc:title "Dublin Core" ;
     lib:source dc: ;
-    void:dataDump <file:///nt/ontology/dc.ttl> .
+    void:dataDump <dc.ttl> .
 
 <wordnet> a void:Dataset ;
     dc:title "WordNet" ;
-    void:dataDump <file:///nt/ontology/wordnet.nt.gz> ;
-    void:dataDump <file:///nt/ontology/wordnet-ontology.xml> .
+    void:dataDump <wordnet.nt.gz> ;
+    void:dataDump <wordnet-ontology.xml> .
 
 <schema> a void:Dataset ;
     dc:title "Schema.org" ;
     lib:source schema: ;
-    void:dataDump <file:///nt/ontology/schema.org.ttl> .
+    void:dataDump <schema.org.ttl> .
 
 <foaf> a void:Dataset ;
     dc:title "Friend of a Friend" ;
@@ -121,8 +119,8 @@
 
 <mbrock> a void:Dataset ;
     dc:title "Mikael Brockman" ;
-    void:dataDump <file:///nt/ontology/mbrock.secret.ttl> .
+    void:dataDump <mbrock.secret.ttl> .
 
 <captsolo> a void:Dataset ;
     dc:title "Uldis Bojars" ;
-    void:dataDump <file:///nt/ontology/foaf-captsolo.rdf> .
+    void:dataDump <foaf-captsolo.rdf> .

@@ -46,7 +46,7 @@ open(Database) :-
 % load(Atom, Type) :-
 %     format(atom(Filename), "vocabs/~w.~w", [Atom, Type]),
 %     rdf_load(Path, [graph(Atom)]).
-% 
+%
 % load(Atom) :- load(Atom, ttl).
 
 load :-
@@ -64,7 +64,9 @@ graph_url('https://node.town/graph').
 
 sync(X) :-
     format(atom(S), "http://~w:4000/graph", [X]),
-    rdf_load(S, [graph('https://node.town/graph')]).
+    rdf_load(S, [graph('https://node.town/graph')]),
+    graph_url(G),
+    rdf_default_graph(G).
 
 :- rdf_meta
        spew(r, r, o),
