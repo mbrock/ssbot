@@ -5,16 +5,19 @@
            item/4,
            find/3,
            link/2,
-           json/2
+           json/2,
+           known_event/2,
+           grok_all/1
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
 :- use_module(library(persistency)).
 :- use_module(library(http/json)).
 :- use_module(library(openapi), [openapi_read/2]).
-:- use_module(openai, [completion/3]).
+:- use_module(openai, [completion/3, ask/2]).
 :- use_module(base, [mint/1, know/3]).
 :- use_module(otp, [spin/2]).
+:- use_module(apis).
 :- persistent known_event(data:any, time:float).
 :- db_attach("events.db", []).
 
@@ -43,8 +46,6 @@ frob :-
            ;   true
            )).
 
-%!  id_scope_relation(?Relation, ?Service) is nondet.
-%
 %   True if the relation indicates an ID with a scope,
 %   e.g. a "Telegram ID" or a "Twitter ID".
 %
@@ -98,13 +99,13 @@ grok(X) :-
     link(X, S), !,
     foreach(grok(X, P, O),
             (know(S, P, O))),
-    format("linked ~w to ~w~n~n", [X, S]).
+    format(user_output, "linked ~w to ~w~n~n", [X, S]).
 
 grok(X) :-
     \+ grok(X, rdf:type, _),
     (   dull(X)
     ->  true
-    ;   format("No type for ~w~n", [X])).
+    ;   format(user_error, "No type for ~w~n", [X])).
 
 grok(recv(telegram, _), nt:platform, nt:'Telegram').
 
@@ -149,6 +150,69 @@ grok(recv(_, X), nt:jsonPayload, V) :-
         string(V),
         json_write_dict(current_output, X, [width(80)])).
 
+% Respond to "inline queries" which look like this:
+%
+%   recv(telegram,_11762{inline_query:_11774{chat_type:group,from:_11820{first_name:Mikael,id:362441422,is_bot:false,is_premium:true,language_code:en,last_name:Brockman,username:mbrockman},id:1556674055259396328,offset:,query:foobar},update_id:289124535})
+%
+% We respond with a list of results from Qdrant (see qdrant.pl).
+
+grok(recv(telegram, X), rdf:type, nt:'Query') :-
+    debug(telegram, "Query: ~p", [X]),
+    item(X, inline_query/query, string, Query),
+    debug(telegram, "Query: ~p", [Query]),
+    string_length(Query, Len),
+    Len > 3,
+    item(X, inline_query/id, string, ID),
+    qdrant:search(Query, 20, Results),
+    debug(telegram, "Results: ~w", [Results]),
+    findall(Answer,
+            (   member(Result, Results.result),
+                Text = Result.payload.text,
+                rdf(Topic, schema:text, Text^^xsd:string),
+                rdf(Topic, schema:isPartOf, Source),
+                rdf(Source, rdfs:label, Title@en),
+                rdf(Source, schema:author, Author^^xsd:string),
+                format(string(Attribution), "~w, ~w", [Author, Title]),
+                format(string(Content), "\"~w\"~n~n—~w", [Text, Attribution]),
+                rdf(Source, schema:image, Image^^xsd:anyURI),
+                ReplyMarkup = _{inline_keyboard: [[_{text: "tldr",
+                                                     callback_data: "tldr"}]]},
+                Answer = _{ type: article,
+                            id: Topic,
+                            title: Attribution,
+                            input_message_content: _{message_text: Content},
+                            description: Text,
+                            thumb_url: Image,
+                            reply_markup: ReplyMarkup
+                          }
+            ),
+            Answers),
+    
+    api_post(telegram, [answerInlineQuery],
+             json(_{inline_query_id: ID, results: Answers}),
+             _).
+
+% Respond to "callback queries" which look like this:
+%   recv(telegram,_44130{callback_query:_44142{chat_instance:4706171842570693067,data:tldr,from:_44194{first_name:Mikael,id:362441422,is_bot:false,is_premium:true,language_code:en,last_name:Brockman,username:mbrockman},id:1556674054783516387,inline_message_id:BAAAACr_AADOapoVgdYHvexRJWM},update_id:289124583})
+
+grok(recv(telegram, X), rdf:type, nt:'Callback') :-
+    debug(telegram, "Callback: ~p", [X]),
+    item(X, callback_query/data, string, Data),
+    item(X, callback_query/id, string, ID),
+    item(X, callback_query/message/message_id, integer, MessageID),
+    item(X, callback_query/message/chat/id, integer, ChatID),
+    item(X, callback_query/message/text, string, Text),
+    debug(telegram, "Text: ~p", [Text]),
+    (   Data = "tldr"
+    ->  tldr(Text, TLDR),
+        format(string(Reply), "~w", [TLDR]),
+        api_post(telegram, [sendMessage],
+                 json(_{chat_id: ChatID,
+                        text: Reply,
+                        reply_to_message_id: MessageID}),
+                 _)
+    ;   true).
+
 grok(recv(discord, _), nt:platform, nt:'Discord').
 
 grok(recv(discord, X), rdf:type, as:'Note') :-
@@ -166,11 +230,114 @@ grok(recv(discord, X), as:published, O) :-
 grok(recv(discord, X), as:attributedTo, O) :-
     item(X, d/author/username, string, O).
 
+grok(readwise(X), rdf:type, schema:'CreativeWork') :-
+    item(X, category, string, Category),
+    \+ Category = "tweets".
+
+grok(readwise(_), nt:platform, nt:readwise).
+
+grok(readwise(X), nt:payload, JSON^^nt:json) :-
+    % Weird unicode characters in the JSON cause errors
+    % unless we set the stream property `representation_errors`
+    % to 'unicode'.
+    with_output_to(
+        string(JSON),
+        ( set_stream(current_output, representation_errors(unicode))
+        , json_write_dict(current_output, X, [width(80)]))).
+
+grok(readwise(X), nt:readwiseId, Id) :-
+    item(X, user_book_id, integer, Id).
+
+% {
+%   "asin":"B0071M88DQ",
+%   "author":"Esther Perel",
+%   "book_tags": [],
+%   "category":"books",
+%   "cover_image_url":"https://images-na.ssl-images-amazon.com/images/I/41i7NrDNxQL._SL75_.jpg",
+%   "document_note":null,
+%   "highlights": [
+%     {
+%       "book_id":945822,
+%       "color":"yellow",
+%       "created_at":"2019-10-06T20:08:15.112Z",
+%       "end_location":null,
+%       "external_id":null,
+%       "highlighted_at":"2019-07-02T04:56:00Z",
+%       "id":28500137,
+%       "is_discard":false,
+%       "is_favorite":false,
+%       "location":489,
+%       "location_type":"location",
+%       "note":"",
+%       "readwise_url":"https://readwise.io/open/28500137",
+%       "tags": [],
+%       "text":"Love is at once an affirmation and a transcendence of who we are.",
+%       "updated_at":"2019-10-06T20:08:15.112Z",
+%       "url":null
+%     }, ...
+%   ],
+%   "readable_title":"Mating in Captivity",
+%   "readwise_url":"https://readwise.io/bookreview/945822",
+%   "source":"kindle",
+%   "source_url":null,
+%   "title":"Mating in Captivity",
+%   "unique_url":null,
+%   "user_book_id":945822
+% }
+
+%% Readwise: category "books" => schema:Book
+grok(readwise(X), rdf:type, schema:'Book') :-
+    item(X, category, string, "books").
+
+%% Readwise: .readable_title = rdfs:label (@en)
+grok(readwise(X), rdfs:label, Label@en) :-
+    item(X, readable_title, string, Label).
+
+%% Readwise: .asin => schema:isbn
+grok(readwise(X), schema:isbn, O) :-
+    item(X, asin, string, O).
+
+%% Readwise: .author => schema:author
+grok(readwise(X), schema:author, O) :-
+    item(X, author, string, O).
+
+%% Readwise: .cover_image_url => schema:image
+grok(readwise(X), schema:image, O^^xsd:anyURI) :-
+    item(X, cover_image_url, string, O).
+
+%% Readwise: .readwise_url => schema:url
+grok(readwise(X), schema:url, O) :-
+    item(X, readwise_url, string, O).
+
+%% Readwise: .highlights => schema:Quotation
+grok(readwise(X), schema:hasPart, O) :-
+    grok(readwise(X), nt:readwiseId, SourceId),
+    rdf(Source, nt:readwiseId, SourceId),
+    item(X, highlights, is_list, Highlights),
+    member(Highlight, Highlights),
+    item(Highlight, id, integer, ID),
+    find(O, nt:readwiseId, ID),
+    know(O, schema:isPartOf, Source),
+    json(O, Highlight),
+    know(O, nt:platform, nt:readwise),
+    know(O, rdf:type, schema:'Quotation'),
+    % .highlighted_at => schema:dateCreated
+    item(Highlight, highlighted_at, string, Date),
+    know(O, schema:dateCreated, Date^^xsd:dateTime),
+    % .text => schema:text
+    item(Highlight, text, string, Text),
+    know(O, schema:text, Text).
+
 grok :-
     known_event(E, _T),
     E = recv(_, _),
     grok(E, rdf:type, _),
     grok(E).
+
+grok_all(X) :-
+    forall((known_event(X, _T),
+            grok(X, rdf:type, _)),
+           grok(X)).
 
 unix_date(Unix, Date) :-
     stamp_date_time(Unix, DateTime, local),
@@ -272,5 +439,15 @@ openapi_request_body_property(API, Key, Value, ID) :-
     know(PropertyID, schema:isPartOf, ID),
     know(PropertyID, schema:isPartOf, API),
     know(PropertyID, schema:description, Description^^nt:markdown).
+
+
+tldr(Text, TLDR) :-
+        format(string(Prompt),
+           "~w~n~ntl;dr:",
+           [Text]),
+    ask(Prompt, Result0),
+    normalize_space(string(TLDR), Result0).
+
+
 
 :- debug(openapi).

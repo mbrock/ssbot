@@ -86,7 +86,11 @@ similarity_search(I1, I2, Similarity) :-
     member(Similarity-I2, Result2).
 
 ask(Question, Answer) :-
-    Options = _{max_tokens: 200, temperature: 0.1},
+    string_length(Question, L),
+    % estimate GPT-3 tokens of question
+    Tokens is L // 4,
+    MaxTokens is 400 + Tokens,
+    Options = _{max_tokens: MaxTokens, temperature: 0.7},
     once(completion(Question, Options, Completion)),
     Answer = Completion.text.
 

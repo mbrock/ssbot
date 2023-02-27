@@ -4,7 +4,13 @@
             dial/0,
             static/2,
             recv_answers/2,
-            stop/0
+            stop/0,
+            relevant/3,
+            relevant/3,
+            look/2,
+            look/2,
+            esbuild/0,
+            study/2
           ]).
 
 :- reexport(otp).
@@ -14,6 +20,9 @@
 :- reexport(openai).
 :- reexport(discord).
 :- reexport(telegram).
+:- reexport(readwise).
+
+:- use_module(qdrant, []).
 
 :- debug(spin).
 
@@ -25,6 +34,7 @@
 :- use_module(library(http/json), [json_read_dict/2]).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_error)).
+:- use_module(library(http/http_parameters)).
 
 :- use_module(library(pengines), []).
 
@@ -33,12 +43,13 @@
 :- http_handler(root(.), graph(html), []).
 :- http_handler(root(graph), graph(ttl), []).
 
-% :- shell('cd web && npm run esbuild').
+esbuild :-
+  shell('cd web && npm run esbuild').
 
 static(Path, File) :-
     http_handler(root(Path), http_reply_file(File, []), []).
 
-:- static('index.js', 'web/index.js').
+:- static('index.js', 'web/dist/index.js').
 :- static('tau-prolog.js', 'web/tau-prolog.js').
 
 :- use_module(library(http/websocket)).
@@ -75,14 +86,18 @@ session(Context) :-
     http_in_session(Session),
     context(session(Session), Context).
 
-graph(html, _Request) :-
+graph(html, Request) :-
     session(Context),
     know(Context, nt:action, nt:'login/telegram'),
     deny(nt:'login/telegram', as:content, _),
     know(nt:'login/telegram', as:content,
-        "<script async src=https://telegram.org/js/telegram-widget.js?21 data-telegram-login=nodetownbot data-size=small data-radius=4 data-onauth='onTelegramAuth(user)' data-request-access=write></script>"^^nt:html),
+        "<script async src=https://telegram.org/js/telegram-widget.js?21 data-telegram-login=riga_ss_bot data-size=small data-radius=4 data-onauth='onTelegramAuth(user)' data-request-access=write></script>"^^nt:html),
+    http_parameters(Request,
+                    [query(Query, [default('')])]),
     reply_html_page(
         [ title('node.town'),
+          meta([name(viewport),
+                content('width=device-width, initial-scale=1.0')]),
           link([rel(stylesheet),
                 href('https://font.node.town/index.css')]),
           link([rel(stylesheet),
@@ -92,7 +107,7 @@ graph(html, _Request) :-
           \style
         ],
         main([h1('node.town'),
-              \graph_view(Context),
+              \graph_view(Context, Query),
               div([id(editor), autofocus], [])])).
 
 graph(ttl, _Request) :-
@@ -105,44 +120,106 @@ html_string(HTML, String) :-
     with_output_to(string(String),
                    print_html(Tokens)).
 
-relevant(C, C).
-relevant(C, X) :-
+relevant(X, X, _) :-
     rdf_subject(X),
-    \+ rdf(X, nt:closed, true^^xsd:boolean),
-    rdf(C, _, X), !.
-
-relevant(C, X) :-
-    rdf_subject(C),
-    rdf(C, X, _), !.
-
-salient(C, X) :- relevant(C, X), !.
-salient(C, X) :- relevant(C, Y), relevant(X, Y), !.
-
-look(C, X) :-
-    rdf_resource(X),
     \+ rdf_is_bnode(X),
-    salient(C, X).
+    \+ rdf(X, nt:closed, _).
+
+relevant(X, Y, 0) :-
+    rdf(X, _, Y),
+    rdf_subject(Y),
+    \+ rdf_is_bnode(Y),
+    \+ rdf(Y, nt:closed, _).
+
+relevant(X, Y, Depth) :-
+    Depth > 0,
+    rdf(X, _, Z),
+    rdf_is_subject(Z),
+    relevant(Z, Y, Depth-1).
+
+back(X, Y) :-
+    rdf(Y, _, X),
+    \+ rdf_is_bnode(Y).
 
 description(Subject, Pairs) :-
     findall(P-O, rdf(Subject, P, O), Pairs0),
     keysort(Pairs0, Pairs).
 
+:- rdf_meta look(r, r).
+
+look(_, nt:mbrock).
+%look(_, 'file:///home/mbrock/ssbot/vocabs/foaf-captsolo.rdf#Uldis_Bojars').
+%look(_, X) :-
+%    rdf(X, rdf:type, as:'Profile').
+
+look(_, X) :-
+    rdf(X, rdf:type, schema:'Book').
+
+% look(_, X) :-
+%     rdf(X, rdf:type, schema:'Quotation').
+    
+%look(Context, Topic) :-
+%    relevant(Context, Topic, 1).
+% 
+%look(Context, Topic) :-
+%    relevant(Context, X, 1),
+%    back(X, Topic).
+
 descriptions(Context, Descriptions) :-
+    (   setof(Topic, look(Context, Topic), Topics)
+    ->  true
+    ;   Topics = []),
     findall(Topic-Pairs,
-            (look(Context, Topic),
+            (member(Topic, Topics),
              description(Topic, Pairs)),
             Descriptions0),
-    keysort(Descriptions0, Descriptions).
+    keysort(Descriptions0, Descriptions1),
+    reverse(Descriptions1, Descriptions).
 
-graph_view(Context) -->
-    { descriptions(Context, Descriptions) },
+graph_view(Context, '') -->
+    { debug(web, 'Context: ~p', [Context]),
+      descriptions(Context, Descriptions) },
     html(section(
              \description_tables(Descriptions))).
+
+graph_view(Context, Query) -->
+    { debug(web, 'Context: ~p, Query: ~p', [Context, Query]),
+      qdrant:search(Query, 10, R),
+      Results = R.result,
+      findall(Topic-Pairs,
+              (member(Result, Results),
+               Text = Result.payload.text,
+               rdf(Topic, schema:text, Text^^xsd:string),
+               description(Topic, Pairs)),
+              Descriptions)
+    },
+    html(section(
+             \description_tables(Descriptions))).
+
+study(Query, Result) :-
+    qdrant:search(Query, 10, R),
+    Results = R.result,
+    findall(Line,
+            (member(Result, Results),
+             Text = Result.payload.text,
+             rdf(Topic, schema:text, Text^^xsd:string),
+             rdf(Source, schema:hasPart, Topic),
+             rdf(Source, schema:author, Author^^xsd:string),
+             rdf(Source, rdfs:label, Label@en),
+             format(string(Line), "~w (~w): ``~w''",
+                    [Label, Author, Text])),
+            Lines),
+    atomic_list_concat(Lines, '\n\n', Context),
+    format(string(Prompt),
+           "Let's consider the theme ~w.~n~nSalient quotes:~n~n~w~n~nInspired by that context, I propose the following:",
+           [Context, Query]),
+    ask(Prompt, Result0),
+    normalize_space(string(Result), Result0).
 
 talk(Context, WebSocket) :-
     mint(url(Id)),
     know(Id, rdf:type, nt:'WebSocket'),
-    know(Context, nt:socket, Id),
+    know(Id, as:context, Context),
     assertz(socket(Id, WebSocket)),
     talk(recv, Id, WebSocket),
     retract(socket(Id, WebSocket)).
@@ -179,6 +256,7 @@ talk(recv, Id, WebSocket) :-
     (   Message.opcode == close
     ->  know(Id, nt:closed, true)
     ;   mint(url(MsgId)),
+        debug(web, 'Message: ~p', [Message]),
         know(MsgId, as:context, Id),
         get_time(TimeStamp),
         know(MsgId, as:time, TimeStamp),
@@ -188,6 +266,11 @@ talk(recv, Id, WebSocket) :-
         ),
         talk(recv, Id, WebSocket)
     ).
+
+handle_json(Id, MsgId, ["query", Query]) :-
+    debug(web, 'Query: ~p', [Query]),
+    know(MsgId, as:content, Query),
+    tell(Id, format("hello ~w~n", [Query])).
 
 handle_json(Id, MsgId, ["auth", "telegram", Data]) :-
     item(Data, id, number, TelegramUserId),
@@ -271,7 +354,8 @@ properties([P-O|T]) -->
     properties(T).
 
 description_table(Subject, Pairs) -->
-    { anchor(Subject, Anchor, Prefix:Local) },
+    { debug(web, 'Description: ~p ~p', [Subject, Pairs]),
+      anchor(Subject, Anchor, Prefix:Local) },
     html(
         article(
             [\heading(Prefix, Local),
@@ -288,6 +372,12 @@ description_tables([]) --> [].
 description_tables([Subject-Pairs|T]) -->
     description_table(Subject, Pairs),
     description_tables(T).
+
+show(X, P) -->
+    { rdf(P, nt:secrecy, nt:secret) },
+    !,
+    html(details([class(secret)],
+                 [summary("redacted"), \show(X, true)])).
 
 show(X^^'http://www.w3.org/2001/XMLSchema#string', _) -->
     html(span(X)).
@@ -341,6 +431,12 @@ show(X, _) -->
             span(class(colon), :),
             span(class(local), Name)])).
 
+show(X, _) -->
+    { atom(X),
+      \+ rdf_is_bnode(X),
+      \+ rdf_resource(X) },
+    html(a([href(X)], X)).
+
 % render bnodes inline recursively
 show(X, _) -->
     { atom(X),
@@ -355,6 +451,10 @@ show(X, _) -->
 show(@(X, Lang), _) -->
     { string(X), atom(Lang) },
     html(span([lang(Lang)], X)).
+
+show(X, Y) -->
+    { debug(web, 'show(~w, ~w)~n', [X, Y]) },
+    html(span('~w (~w)'-[X, Y])).
 
 anchor(X, Id, Prefix:Local) :-
     \+ rdf_is_bnode(X),
@@ -392,30 +492,25 @@ css_line(Line) :-
     css(Selector, Property, Value),
     css_line(Selector, Property, Value, Line).
 
+css(body, 'font-family', ["univers lt pro", helvetica, 'sans-serif']).
+css(body, 'font-size', '16px').
+css(body, 'line-height', '20px').
+css('*', 'font-size', '16px').
+css('*', '-webkit-font-adjust', none).
+css(body, 'margin', 0).
 css('h1, h2', 'margin', 0).
 css(':target', 'background-color', 'lightyellow').
 css('[id]^="nt:"]', 'font-style', italic).
 css('[lang]', 'opacity', 0.8).
 css('a', 'text-decoration', none).
 css('section', 'flex-direction', 'column').
-
 css('article h2', 'margin', 0).
 css('article h2', 'display', 'inline-flex').
-css('article h2', 'border', '1px solid #aaa').
-css('article h2', 'border-bottom', none).
-css('article h2', 'padding', '0 0.5rem').
-css('article h2', 'background-color', '#fbfff2').
+css('article h2', 'padding', '0.25rem 0.5rem').
 css('table', 'border', '1px solid #aaa').
 css('table, article h2', 'border-left-width', '4px').
 css('table', 'max-width', '100%').
-%css('table', 'min-width', '20em').
-%css('table', 'padding', '.5em').
 css('td', 'padding', '0 .5rem').
-css('body', 'font-family', ["univers lt pro", helvetica, 'sans-serif']).
-css('body', 'font-size', '16px').
-css('body', 'line-height', '22px').
-css('body', 'margin', 0).
-
 css(main, display, grid).
 css(main, 'grid-template-rows', 'auto 1fr auto').
 css('body, main', position, absolute).
@@ -429,18 +524,19 @@ css(section, padding, '1em').
 
 css(h1, 'border-bottom', '1px solid #aaa').
 css(h1, background, '#fbfff2').
-css(h1, padding, '0 0.5rem').
+css(h1, padding, '0.25rem 0.5rem').
 
 css('#editor', 'grid-row', 3).
 css('#editor', 'grid-column', 1).
 css('#editor', 'border-top', '1px solid #aaa').
 css('#editor .cm-scroller', 'font-family', ["berkeley mono", monospace]).
 
-css('h1, h2', 'font-size', inherit).
 css('h1, h2', 'font-weight', normal).
 css('pre, tt', 'font-family', ["berkeley mono", monospace]).
 css('section', 'display', flex).
 css('section', 'gap', '1em').
+css('section', 'flex-wrap', wrap).
+css('section', 'flex-direction', row).
 css('td > p:first-child', 'margin-top', 0).
 css('td > p:last-child', 'margin-bottom', 0).
 css('td:nth-child(1)', 'padding-right', '.5em').
@@ -456,27 +552,17 @@ css('table[id^="_:"]', 'border-width', '1px 3px').
 css('table[id^="_:"]', 'border-radius', '10px').
 css('table[id^="_:"]', 'background-color', 'rgba(0,0,0,0.02)').
 
-
-css('img', 'max-width', '3rem').
+css('img', 'width', '5rem').
 css('img', 'height', 'auto').
-% subtle border, radius, and shadow
-css('img', 'border', '1px solid #aaa').
-css('img', 'border-radius', '0.5rem').
-css('img', 'box-shadow', '0 0 0.5rem rgba(0,0,0,0.1)').
+css('img, .secret', 'border', '1px solid #aaa').
+css('img, .secret', 'border-radius', '0.5rem').
+css('img, .secret', 'box-shadow', '0 0 0.5rem rgba(0,0,0,0.1)').
+
+css('.secret', display, inline).
+css('.secret', padding, '.25rem .5rem .1rem').
+%css('.secret', 'font-size', '0.8em').
+css('.secret', 'line-height', '0.8em').
 
 style -->
     { findall(Line, css_line(Line), Lines) },
     html(style(Lines)).
-
-
-
-
-
-
-
-
-
-
-
-
-

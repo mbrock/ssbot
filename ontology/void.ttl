@@ -1,0 +1,128 @@
+@prefix as: <http://www.w3.org/ns/activitystreams#> .
+@prefix cnt: <http://www.w3.org/2011/content#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix dfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix http: <http://www.w3.org/2011/http#> .
+@prefix httpc: <http://www.w3.org/2011/http-statusCodes#> .
+@prefix httph: <http://www.w3.org/2011/http-headers#> .
+@prefix httpm: <http://www.w3.org/2011/http-methods#> .
+@prefix lib: <http://www.swi-prolog.org/rdf/library/> .
+@prefix ontolex: <http://www.w3.org/ns/lemon/ontolex#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix vann: <http://purl.org/vocab/vann/> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+@prefix void: <http://rdfs.org/ns/void#> .
+@prefix wn: <http://wordnet-rdf.princeton.edu/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix nt: <https://node.town/> .
+@prefix id: <https://id.node.town/> .
+
+@prefix yacht: <http://yacht:4000/> .
+@prefix hamlet: <http://hamlet:4000/> .
+
+@base <https://node.town/rdf/> .
+
+[ a lib:Namespace ; lib:mnemonic "nt" ; lib:namespace nt: ] .
+[ a lib:Namespace ; lib:mnemonic "id" ; lib:namespace id: ] .
+
+[ a lib:Namespace ; lib:mnemonic "wn" ; lib:namespace wn: ] .
+[ a lib:Namespace ; lib:mnemonic "as" ; lib:namespace as: ] .
+[ a lib:Namespace ; lib:mnemonic "yacht" ; lib:namespace yacht: ] .
+[ a lib:Namespace ; lib:mnemonic "hamlet" ; lib:namespace hamlet: ] .
+
+[ a lib:Namespace ; lib:mnemonic "cnt" ; lib:namespace cnt: ] .
+[ a lib:Namespace ; lib:mnemonic "http" ; lib:namespace http: ] .
+[ a lib:Namespace ; lib:mnemonic "httpm" ; lib:namespace httpm: ] .
+[ a lib:Namespace ; lib:mnemonic "httph" ; lib:namespace httph: ] .
+[ a lib:Namespace ; lib:mnemonic "httpc" ; lib:namespace httpc: ] .
+
+[ a lib:Namespace ; lib:mnemonic "schema" ; lib:namespace schema: ] .
+[ a lib:Namespace ; lib:mnemonic "foaf" ; lib:namespace foaf: ] .
+[ a lib:Namespace ; lib:mnemonic "vcard" ; lib:namespace vcard: ] .
+
+<activitystreams> a void:Dataset ;
+    dc:title "Activity Streams 2.0"@en ;
+    lib:source as: ;
+    void:dataDump <file:///nt/ontology/activitystreams.ttl> .
+
+<cnt> a void:Dataset ;
+    dc:title "Content Vocabulary"@en ;
+    lib:source cnt: ;
+    void:dataDump cnt: .
+
+<http> a void:Dataset ;
+    dc:title "HTTP Vocabulary"@en ;
+    lib:source http: ;
+    void:dataDump http: .
+
+<httpm> a void:Dataset ;
+    dc:title "HTTP Methods Vocabulary"@en ;
+    lib:source httpm: ;
+    void:dataDump httpm: .
+
+<httph> a void:Dataset ;
+    dc:title "HTTP Headers Vocabulary"@en ;
+    lib:source httph: ;
+    void:dataDump httph: .
+
+<httpc> a void:Dataset ;
+    dc:title "HTTP Status Codes Vocabulary"@en ;
+    lib:source httpc: ;
+    void:dataDump httpc: .
+
+<nt> a void:Dataset ;
+    dc:title "Internet Ontology Very Good 2.0" ;
+    void:dataDump <file:///nt/ontology/nt.ttl> .
+
+<rdfs> a void:Dataset ;
+    dc:title "RDF Schema" ;
+    lib:source rdfs: ;
+    void:dataDump <file:///nt/ontology/rdfs.ttl> .
+
+<rdf> a void:Dataset ;
+    dc:title "RDF" ;
+    lib:source rdf: ;
+    void:dataDump <file:///nt/ontology/rdf.ttl> .
+
+<owl> a void:Dataset ;
+    dc:title "OWL" ;
+    lib:source owl: ;
+    void:dataDump <file:///nt/ontology/owl.ttl> .
+
+<dc> a void:Dataset ;
+    dc:title "Dublin Core" ;
+    lib:source dc: ;
+    void:dataDump <file:///nt/ontology/dc.ttl> .
+
+<wordnet> a void:Dataset ;
+    dc:title "WordNet" ;
+    void:dataDump <file:///nt/ontology/wordnet.nt.gz> ;
+    void:dataDump <file:///nt/ontology/wordnet-ontology.xml> .
+
+<schema> a void:Dataset ;
+    dc:title "Schema.org" ;
+    lib:source schema: ;
+    void:dataDump <file:///nt/ontology/schema.org.ttl> .
+
+<foaf> a void:Dataset ;
+    dc:title "Friend of a Friend" ;
+    lib:source foaf: ;
+    void:dataDump foaf: .
+
+<vcard> a void:Dataset ;
+    dc:title "vCard" ;
+    lib:source vcard: ;
+    void:dataDump vcard: .
+
+<mbrock> a void:Dataset ;
+    dc:title "Mikael Brockman" ;
+    void:dataDump <file:///nt/ontology/mbrock.secret.ttl> .
+
+<captsolo> a void:Dataset ;
+    dc:title "Uldis Bojars" ;
+    void:dataDump <file:///nt/ontology/foaf-captsolo.rdf> .

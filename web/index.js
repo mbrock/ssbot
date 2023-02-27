@@ -1,3 +1,7 @@
+import {EditorState} from "@codemirror/state"
+import {EditorView, keymap} from "@codemirror/view"
+import {defaultKeymap} from "@codemirror/commands"
+
 //
 // Tau Prolog is loaded in the browser.
 //
@@ -11,7 +15,14 @@
 // which executes the query and sends the result back.
 //
 
-let prolog = pl.create(1000)
+window.prolog = pl.create(1000)
+
+prolog.consult(`
+  :- use_module(library(dom)).
+  :- use_module(library(js)).
+  :- use_module(library(format)).
+  :- use_module(library(concurrent)).
+`)
 
 let webSocketProtocol = (
   location.protocol == "https:" ? "wss:" : "ws:")
@@ -20,9 +31,10 @@ let webSocket = new WebSocket(webSocketURL)
 
 webSocket.onmessage = async event => {
   let { goal, id } = JSON.parse(event.data)
+  goal = `${goal}.`
   console.log("query " + id + ": " + goal)
   try {
-    await prolog.queryPromise(goal)
+    await prolog.promiseQuery(goal)
     for await (let answerObject of prolog.promiseAnswers()) {
       let answer = prolog.format_answer(answerObject)
       webSocket.send(JSON.stringify({ id, answer }))
@@ -46,3 +58,24 @@ webSocket.onerror = event => {
 function onTelegramAuth(user) {
   webSocket.send(JSON.stringify(["auth", "telegram", user]))
 }
+
+let myKeymap = keymap.of([{
+  key: "Enter",
+  run: view => {
+    // navigate to /?query=... (don't use History API)
+    let query = view.state.doc.toString()
+    location.href = `/?query=${encodeURIComponent(query)}`
+  }
+}, ...defaultKeymap])
+
+let startState = EditorState.create({
+  doc: "",
+  extensions: [myKeymap]
+})
+
+let view = new EditorView({
+  state: startState,
+  parent: document.querySelector("#editor")
+})
+
+
