@@ -14,6 +14,7 @@
 :- use_module(library(persistency)).
 :- use_module(library(http/json)).
 :- use_module(library(openapi), [openapi_read/2]).
+:- use_module(qdrant, []).
 :- use_module(openai, [completion/3, ask/2]).
 :- use_module(base, [mint/1, know/3]).
 :- use_module(otp, [spin/2]).
@@ -46,6 +47,28 @@ frob :-
            ;   true
            )).
 
+
+study(Query, Result) :-
+    qdrant:search(Query, 10, R),
+    Results = R.result,
+    findall(Line,
+            (member(Result, Results),
+             Text = Result.payload.text,
+             rdf(Topic, schema:text, Text^^xsd:string),
+             rdf(Source, schema:hasPart, Topic),
+             rdf(Source, schema:author, Author^^xsd:string),
+             rdf(Source, rdfs:label, Label@en),
+             format(string(Line), "~w (~w): ``~w''",
+                    [Label, Author, Text])),
+            Lines),
+    atomic_list_concat(Lines, '\n\n', Context),
+    format(string(Prompt),
+           "~w~n~n(end of quotes)~n~nThe theme is ~w. We can reference the quotes. Let's see...",
+           [Context, Query]),
+    ask(Prompt, Result0),
+    normalize_space(string(Result), Result0).
+
+
 %   True if the relation indicates an ID with a scope,
 %   e.g. a "Telegram ID" or a "Twitter ID".
 %
@@ -66,7 +89,7 @@ link(X, URL) :-
     !,
     format("Linking ~w (~w) [~w]~n", [URL, ID, Graph]).
 
-link(X, URL) :-
+link(_X, URL) :-
     mint(url(URL)),
     format("Minting ~w~n", [URL]).
 
@@ -175,15 +198,14 @@ grok(recv(telegram, X), rdf:type, nt:'Query') :-
                 format(string(Attribution), "~w, ~w", [Author, Title]),
                 format(string(Content), "\"~w\"~n~n—~w", [Text, Attribution]),
                 rdf(Source, schema:image, Image^^xsd:anyURI),
-                ReplyMarkup = _{inline_keyboard: [[_{text: "tldr",
-                                                     callback_data: "tldr"}]]},
+%                ReplyMarkup = _{inline_keyboard: [[_{text: "tldr",
+%                                                     callback_data: "tldr"}]]},
                 Answer = _{ type: article,
                             id: Topic,
                             title: Attribution,
                             input_message_content: _{message_text: Content},
                             description: Text,
-                            thumb_url: Image,
-                            reply_markup: ReplyMarkup
+                            thumb_url: Image
                           }
             ),
             Answers),
@@ -192,14 +214,22 @@ grok(recv(telegram, X), rdf:type, nt:'Query') :-
              json(_{inline_query_id: ID, results: Answers}),
              _).
 
+grok(recv(telegram, X), nt:command, nt:ask) :-
+    item(X, message/text, string, Text),
+    string_concat("/study ", Theme, Text),
+    once(study(Theme, Answer)),
+    api_post(telegram, [sendMessage],
+             json(_{chat_id: X.message.chat.id,
+                    text: Answer}),
+             _).
+
 % Respond to "callback queries" which look like this:
 %   recv(telegram,_44130{callback_query:_44142{chat_instance:4706171842570693067,data:tldr,from:_44194{first_name:Mikael,id:362441422,is_bot:false,is_premium:true,language_code:en,last_name:Brockman,username:mbrockman},id:1556674054783516387,inline_message_id:BAAAACr_AADOapoVgdYHvexRJWM},update_id:289124583})
 
 grok(recv(telegram, X), rdf:type, nt:'Callback') :-
     debug(telegram, "Callback: ~p", [X]),
     item(X, callback_query/data, string, Data),
-    item(X, callback_query/id, string, ID),
-    item(X, callback_query/message/message_id, integer, MessageID),
+    item(X, callback_query/id, string, _ID),
     item(X, callback_query/message/chat/id, integer, ChatID),
     item(X, callback_query/message/text, string, Text),
     debug(telegram, "Text: ~p", [Text]),
@@ -208,8 +238,7 @@ grok(recv(telegram, X), rdf:type, nt:'Callback') :-
         format(string(Reply), "~w", [TLDR]),
         api_post(telegram, [sendMessage],
                  json(_{chat_id: ChatID,
-                        text: Reply,
-                        reply_to_message_id: MessageID}),
+                        text: Reply}),
                  _)
     ;   true).
 

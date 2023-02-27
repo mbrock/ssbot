@@ -9,8 +9,7 @@
             relevant/3,
             look/2,
             look/2,
-            esbuild/0,
-            study/2
+            esbuild/0
           ]).
 
 :- reexport(otp).
@@ -94,6 +93,7 @@ graph(transaction, Format, Request) :-
     rdf_transaction(graph(Format, Request), graph(Format, Request)).
 
 graph(html, Request) :-
+    make,
     session(Context),
     know(Context, nt:action, nt:'login/telegram'),
     http_parameters(Request,
@@ -199,26 +199,6 @@ graph_view(Context, Query) -->
     },
     html(section(
              \description_tables(Descriptions))).
-
-study(Query, Result) :-
-    qdrant:search(Query, 10, R),
-    Results = R.result,
-    findall(Line,
-            (member(Result, Results),
-             Text = Result.payload.text,
-             rdf(Topic, schema:text, Text^^xsd:string),
-             rdf(Source, schema:hasPart, Topic),
-             rdf(Source, schema:author, Author^^xsd:string),
-             rdf(Source, rdfs:label, Label@en),
-             format(string(Line), "~w (~w): ``~w''",
-                    [Label, Author, Text])),
-            Lines),
-    atomic_list_concat(Lines, '\n\n', Context),
-    format(string(Prompt),
-           "Let's consider the theme ~w.~n~nSalient quotes:~n~n~w~n~nInspired by that context, I propose the following:",
-           [Context, Query]),
-    ask(Prompt, Result0),
-    normalize_space(string(Result), Result0).
 
 talk(Context, WebSocket) :-
     rdf_transaction(call((mint(url(Id)),
@@ -389,10 +369,16 @@ description_table(Subject, Pairs) -->
       anchor(Subject, Anchor, Prefix:Local) },
     html(
         article(
-            [\heading(Prefix, Local),
+            [\heading(Subject, Prefix:Local),
              table(
                 [id(Anchor)],
                 \properties(Pairs))])).
+
+heading(Subject, _) -->
+    { rdf_subject(Subject),
+      rdf(Subject, rdfs:label, Label@en) },
+    !,
+    html(header(h2(u(Label)))).
 
 heading('_', _Local) --> !, html([]).
 
@@ -413,7 +399,7 @@ show(X, P) -->
                  [summary("redacted"), \show(X, true)])).
 
 show(X^^'http://www.w3.org/2001/XMLSchema#string', _) -->
-    html(span(X)).
+    html(u(X)).
 
 show(X^^'http://www.w3.org/2001/XMLSchema#anyURI', 'https://schema.org/image') -->
     html(img([src(X)])).
@@ -422,7 +408,7 @@ show(X^^'http://www.w3.org/2001/XMLSchema#anyURI', _) -->
     html(a([href(X)], X)).
 
 show(true^^'http://www.w3.org/2001/XMLSchema#boolean', _) -->
-    html(span('true')).
+    html(u('true')).
 
 show(X^^'https://node.town/json', _) -->
     html(details([summary("JSON"), pre(X)])).
@@ -440,13 +426,13 @@ show(X^^_, _) -->
     html(tt(X)).
 
 show(date(Y,M,D)^^_, _) -->
-    html(span("~w-~w-~w"-[Y,M,D])).
+    html(u("~w-~w-~w"-[Y,M,D])).
 
 show(date_time(Y,M,D,H,Min,S,Offset)^^_, _) -->
-    html(span("~w-~w-~w ~w:~w:~w ~w"-[Y,M,D,H,Min,S,Offset])).
+    html(u("~w-~w-~w ~w:~w:~w ~w"-[Y,M,D,H,Min,S,Offset])).
 
 show('_':Local, _) -->
-    html(span([span(class(colon), ':'),
+    html(u([span(class(colon), ':'),
                span(class(local), Local)])).
 
 show(Prefix:Local, _) -->
@@ -479,15 +465,15 @@ show(X, _) -->
 
 show(X, _) -->
     { atom(X) },
-    html(span(X)).
+    html(u(X)).
 
 show(@(X, Lang), _) -->
     { string(X), atom(Lang) },
-    html(span([lang(Lang)], X)).
+    html(u([lang(Lang)], X)).
 
 show(X, Y) -->
     { debug(web, 'show(~w, ~w)~n', [X, Y]) },
-    html(span('~w (~w)'-[X, Y])).
+    html(s('~w (~w)'-[X, Y])).
 
 :- table anchor/3.
 
@@ -597,6 +583,10 @@ css('.secret', display, inline).
 css('.secret', padding, '.25rem .5rem .1rem').
 %css('.secret', 'font-size', '0.8em').
 css('.secret', 'line-height', '0.8em').
+
+css('u:before', content, "«").
+css('u:after', content, "»").
+css(u, 'text-decoration', none).
 
 style -->
     { findall(Line, css_line(Line), Lines) },

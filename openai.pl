@@ -89,7 +89,7 @@ ask(Question, Answer) :-
     string_length(Question, L),
     % estimate GPT-3 tokens of question
     Tokens is L // 4,
-    MaxTokens is 400 + Tokens,
+    MaxTokens is 800 + Tokens,
     Options = _{max_tokens: MaxTokens, temperature: 0.7},
     once(completion(Question, Options, Completion)),
     Answer = Completion.text.
