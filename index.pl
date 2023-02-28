@@ -156,8 +156,15 @@ look(_, nt:mbrock).
 %look(_, X) :-
 %    rdf(X, rdf:type, as:'Profile').
 
+%look(_, X) :-
+%    rdf(X, rdf:type, schema:'Book').
+
 look(_, X) :-
-    rdf(X, rdf:type, schema:'Book').
+    rdf(X, nt:username, "realnodetown"^^xsd:string).
+
+%look(_, X) :-
+%    rdf(C, nt:username, "realnodetown"^^xsd:string),
+%    rdf(X, nt:context, C).
 
 % look(_, X) :-
 %     rdf(X, rdf:type, schema:'Quotation').
@@ -165,9 +172,6 @@ look(_, X) :-
 %look(Context, Topic) :-
 %    relevant(Context, Topic, 1).
 %
-%look(Context, Topic) :-
-%    relevant(Context, X, 1),
-%    back(X, Topic).
 
 descriptions(Context, Descriptions) :-
     (   setof(Topic, look(Context, Topic), Topics)
@@ -203,7 +207,8 @@ graph_view(Context, Query) -->
 talk(Context, WebSocket) :-
     rdf_transaction(call((mint(url(Id)),
                           know(Id, rdf:type, nt:'WebSocket'),
-                          know(Id, as:context, Context))),
+                          know(Id, as:context, Context),
+                          know(Id, rdf:comment, "This is a Prolog channel for a browser client."@en))),
                     talk(Context)),
     assertz(socket(Id, WebSocket)),
     talk(recv, Id, WebSocket),
@@ -239,7 +244,7 @@ recv_answers(WebSocket, ReqId) :-
 talk(recv, Id, WebSocket) :-
     ws_receive(WebSocket, Message, [format(json)]),
     (   Message.opcode == close
-    ->  know(Id, nt:closed, true)
+    ->  rdf_transaction(know(Id, nt:closed, true))
     ;   rdf_transaction(talk(msg, Id, Message)),
         talk(recv, Id, WebSocket)
     ).
@@ -313,6 +318,8 @@ site :-
     ->  true
     ).
 
+:- use_module(library(ansi_term), [ansi_format/4]).
+
 :- dynamic sung/1.
 
 sing(transaction(end(0), _)) :-
@@ -325,6 +332,11 @@ sing(transaction(end(0), _)) :-
     keysort(Changes, Sorted),
     group_pairs_by_key(Sorted, Grouped),
     dict_create(Dict, rdf, Grouped),
+    
+    get_time(TimeStamp),
+    format_time(string(Time), '%F %T %Z', TimeStamp),
+    ansi_format(user_output, [fg(cyan)], '~w~n', [Time]),
+    
     spew(Dict).
 
 sing(assert(S, P, O, G)) :-
@@ -390,7 +402,7 @@ description_tables([Subject-Pairs|T]) -->
     description_table(Subject, Pairs),
     description_tables(T).
 
-% :- table show//2.
+:- table show//2.
 
 show(X, P) -->
     { rdf(P, nt:secrecy, nt:secret) },
@@ -437,8 +449,8 @@ show('_':Local, _) -->
 
 show(Prefix:Local, _) -->
     { rdf_global_id(Prefix:Local, Atom) },
-    show(Atom, nil),
-    !.
+    !,
+    show(Atom, nil).
 
 show(X, _) -->
     { atom(X),

@@ -88,7 +88,7 @@ spew(X) :-
 
 spew(X) :-
     atom(X),
-    ansi_format(user_output, [fg(cyan)], "~q ", [X]).
+    ansi_format(user_output, [fg(cyan)], " ~q ", [X]).
 
 spew(X) :-
     is_list(X),
@@ -99,7 +99,8 @@ spew(X) :-
     is_dict(X),
     dict_pairs(X, _, Pairs),
     foreach(member(Subject-Attrs, Pairs),
-            (spew(Subject),
+            (ansi_format(user_output, [bold], "⦿ ", []),
+             spew(Subject),
              nl(user_output),
              spew(Attrs))),
     nl(user_output).
@@ -122,7 +123,7 @@ spew(S, P, O, G) :-
     spew(S, P, O).
 
 spew(P, O) :-
-    format(user_output, "  * ", []),
+    format(user_output, "  • ", []),
     spew(P),
     spew(O),
     format(user_output, " ~n", []).

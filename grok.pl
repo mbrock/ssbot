@@ -135,6 +135,24 @@ grok(recv(telegram, _), nt:platform, nt:'Telegram').
 grok(recv(telegram, X), rdf:type, as:'Note') :-
     item(X, message/text, string, _).
 
+grok(recv(telegram, X), rdf:type, as:'Note') :-
+    item(X, channel_post/chat/title, string, _).
+
+grok(recv(telegram, X), as:content, Text^^xsd:string) :-
+    item(X, channel_post/text, string, Text).
+
+%grok(recv(telegram, X), as:attributedTo, AuthorName^^xsd:string) :-
+%    item(X, channel_post/author_signature, string, AuthorName).
+
+grok(recv(telegram, X), as:context, Channel) :-
+    item(X, channel_post/chat/username, string, ChannelUsername),
+    item(X, channel_post/chat/id, integer, ChannelID),
+    item(X, channel_post/chat/title, string, ChannelTitle),
+    find(Channel, nt:telegramID, ChannelID),
+    know(Channel, rdf:type, as:'OrderedCollection'),
+    know(Channel, rdfs:label, ChannelTitle^^xsd:string),
+    know(Channel, nt:username, ChannelUsername^^xsd:string).
+
 grok(recv(telegram, X), nt:telegramId, V) :-
     item(X, message/message_id, integer, V).
 
