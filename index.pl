@@ -332,11 +332,11 @@ sing(transaction(end(0), _)) :-
     keysort(Changes, Sorted),
     group_pairs_by_key(Sorted, Grouped),
     dict_create(Dict, rdf, Grouped),
-    
+
     get_time(TimeStamp),
     format_time(string(Time), '%F %T %Z', TimeStamp),
     ansi_format(user_output, [fg(cyan)], '~w~n', [Time]),
-    
+
     spew(Dict).
 
 sing(assert(S, P, O, G)) :-

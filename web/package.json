@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "esbuild": "esbuild --bundle --sourcemap --outdir=dist index.js"
+    "esbuild": "esbuild --bundle --sourcemap --outdir=dist index.js",
+    "watch": "esbuild --bundle --sourcemap --outdir=dist index.js --watch"
   },
   "repository": {
     "type": "git",
