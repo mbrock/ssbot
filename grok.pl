@@ -71,7 +71,6 @@ study(Query, Result) :-
     ask(Prompt, Result0),
     normalize_space(string(Result), Result0).
 
-
 %   True if the relation indicates an ID with a scope,
 %   e.g. a "Telegram ID" or a "Twitter ID".
 %
@@ -244,6 +243,30 @@ grok(recv(telegram, X), nt:command, "ask"^^xsd:string) :-
     api_post(telegram, [sendMessage],
              json(_{chat_id: X.message.chat.id,
                     text: Answer}),
+             _).
+
+grok(recv(telegram, X), nt:command, "info"^^xsd:string) :-
+    item(X, message/text, string, Text),
+    string_concat("/info ", Topic, Text),
+    % get user full name
+    item(X, message/from/first_name, string, FirstName),
+    item(X, message/from/last_name, string, LastName),
+    % get message ID for responding
+    item(X, message/message_id, integer, MessageID),
+    format(string(Name), "~w ~w", [FirstName, LastName]),
+    % find personal data
+    rdf(Subject, vcard:fn, Name^^xsd:string),
+    % and now we want to present the subject in a GPT-3 prompt context...
+    sing(string(P), subject(Subject)),
+    % ...and use the topic as part of a prompt to get a good answer:
+    format(string(Prompt), "Known relevant facts: ~w~n~nUser query: ~w~n~nAnswer (without any RDF technical syntaxes, English language):", [P, Topic]),
+    % ...and ask GPT-3 to generate a response
+    openai:ask(Prompt, Answer),
+    % and finally send the answer to the user
+    api_post(telegram, [sendMessage],
+             json(_{chat_id: X.message.chat.id,
+                    text: Answer,
+                    reply_to_message_id: MessageID}),
              _).
 
 grok(recv(telegram, X), nt:command, "coach"^^xsd:string) :-

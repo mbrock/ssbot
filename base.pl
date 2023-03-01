@@ -30,6 +30,10 @@
 :- use_module(library(http/http_ssl_plugin)).
 :- use_module(library(sweet)).
 
+:- op(920,fy, *).
+
+*_.
+
 :- dynamic user:file_search_path/2.
 :- multifile user:file_search_path/2.
 
@@ -82,12 +86,12 @@ sync(X) :-
 
 spew(X) :-
     rdf_global_id(P:L, X), !,
-    ansi_format(user_output, [faint], "~w:", [P]),
-    ansi_format(user_output, [bold], "~w~26|~t ", [L]).
+    ansi_format([faint], "~w:", [P]),
+    ansi_format([bold], "~w~26|~t ", [L]).
 
 spew(X) :-
     atom(X),
-    ansi_format(user_output, [fg(cyan)], "~q", [X]).
+    ansi_format([fg(cyan)], "~q", [X]).
 
 spew(X) :-
     is_list(X),
@@ -98,23 +102,23 @@ spew(X) :-
     is_dict(X),
     dict_pairs(X, _, Pairs),
     foreach(member(Subject-Attrs, Pairs),
-            (ansi_format(user_output, [bold], "⦿ ", []),
+            (ansi_format([bold], "⦿ ", []),
              spew(Subject),
              nl(user_output),
              spew(Attrs))),
     nl(user_output).
 
 spew(literal(type(T, X))) :-
-    ansi_format(user_output, [fg(green)], "~w ", [X]),
-    ansi_format(user_output, [fg(blue)], "[~w] ", [T]).
+    ansi_format([fg(green)], "~w", [X]),
+    * ansi_format([fg(blue)], " [~w] ", [T]).
 
 spew(X^^T) :-
-    ansi_format(user_output, [fg(green)], "~w ", [X]),
-    ansi_format(user_output, [fg(blue)], "[~w] ", [T]).
+    ansi_format([fg(green)], "~w", [X]),
+    * ansi_format([fg(blue)], " [~w] ", [T]).
 
 spew(X@en) :-
-    ansi_format(user_output, [fg(yellow)], "~w ", [X]),
-    ansi_format(user_output, [fg(blue)], "[~w] ", [en]).
+    ansi_format([fg(yellow)], "~w", [X]),
+    * ansi_format([fg(blue)], " [~w] ", [en]).
 
 spew(P-O) :-
     spew(P, O).
@@ -123,17 +127,17 @@ spew(S, P, O) :-
     spew(S),
     spew(P),
     spew(O),
-    format(user_output, " .~n", []).
+    format(" .~n", []).
 
 spew(S, P, O, G) :-
-    ansi_format(user_output, [fg(yellow)], "<~w> ", [G]),
+    ansi_format([fg(yellow)], "<~w> ", [G]),
     spew(S, P, O).
 
 spew(P, O) :-
-    format(user_output, "  • ", []),
+    format("  • ", []),
     spew(P),
     spew(O),
-    format(user_output, " ~n", []).
+    format(" ~n", []).
 
 know(S, P, O) :-
     graph_url(G),

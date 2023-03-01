@@ -11,7 +11,8 @@
             look/2,
             esbuild/0,
             sing/1,
-            heading/4
+            heading/4,
+            sing/2
           ]).
 
 :- reexport(otp).
@@ -325,6 +326,7 @@ site :-
 :- dynamic sung/1.
 
 :- rdf_meta sing(t).
+:- rdf_meta sing(@, t).
 
 sing(transaction(end(0), _)) :-
     findall(Quad, sung(Quad), Quads),
@@ -332,7 +334,7 @@ sing(transaction(end(0), _)) :-
     get_time(TimeStamp),
     format_time(string(Time), '%F %T %Z', TimeStamp),
     
-    ansi_format(user_output, [fg(cyan)], '~w~n', [Time]),
+    ansi_format([fg(cyan)], '~w~n', [Time]),
     sing(quads(Quads)),
     retractall(sung(_)).
 
@@ -361,8 +363,13 @@ sing(subject(S)) :-
             POs),
     keysort(POs, Sorted),
     dict_create(Dict, rdf, [S-Sorted]),
-    nl(user_output),
+    nl,
     spew(Dict).
+
+sing(string(String), X) :-
+    with_output_to(
+        string(String),
+        sing(X)).
 
 site(Port) :-
     catch((http_stop_server(Port, []),
