@@ -7,7 +7,10 @@
            link/2,
            json/2,
            known_event/2,
-           grok_all/1
+           grok_all/1,
+           relevant_fact/3,
+           fact_line/4,
+           grak/4
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -128,7 +131,7 @@ grok(X) :-
     \+ grok(X, rdf:type, _),
     (   dull(X)
     ->  true
-    ;   format(user_error, "No type for ~w~n", [X])).
+    ;   debug(grok, "No type for ~w~n", [X])).
 
 grok(recv(telegram, _), nt:platform, nt:'Telegram').
 
@@ -144,7 +147,7 @@ grok(recv(telegram, X), as:content, Text^^xsd:string) :-
 %grok(recv(telegram, X), as:attributedTo, AuthorName^^xsd:string) :-
 %    item(X, channel_post/author_signature, string, AuthorName).
 
-grok(recv(telegram, X), as:context, Channel) :-
+grok(recv(telegram, X), as:audience, Channel) :-
     item(X, channel_post/chat/username, string, ChannelUsername),
     item(X, channel_post/chat/id, integer, ChannelID),
     item(X, channel_post/chat/title, string, ChannelTitle),
@@ -179,12 +182,14 @@ grok(recv(telegram, X), as:audience, Group) :-
     item(X, message/chat/type, string, "group"),
     item(X, message/chat/id, integer, ChatID),
     item(X, message/chat, is_dict, ChatData),
+    item(X, message/chat/title, string, Title),
 
     find(Group, nt:telegramId, ChatID),
     json(Group, ChatData),
 
     know(Group, nt:platform, nt:'Telegram'),
-    know(Group, rdf:type, as:'Group').
+    know(Group, rdf:type, as:'Group'),
+    know(Group, rdfs:label, Title^^xsd:string).
 
 grok(recv(_, X), nt:jsonPayload, V) :-
     with_output_to(
@@ -232,13 +237,24 @@ grok(recv(telegram, X), rdf:type, nt:'Query') :-
              json(_{inline_query_id: ID, results: Answers}),
              _).
 
-grok(recv(telegram, X), nt:command, nt:ask) :-
+grok(recv(telegram, X), nt:command, "ask"^^xsd:string) :-
     item(X, message/text, string, Text),
     string_concat("/study ", Theme, Text),
     once(study(Theme, Answer)),
     api_post(telegram, [sendMessage],
              json(_{chat_id: X.message.chat.id,
                     text: Answer}),
+             _).
+
+grok(recv(telegram, X), nt:command, "coach"^^xsd:string) :-
+    item(X, message/text, string, Text),
+    string_concat("/coach", _, Text),
+    item(X, message/chat/id, integer, ChatID),
+    find(Conversation, nt:telegramId, ChatID),
+    know(Conversation, nt:situation, nt:coach),
+    api_post(telegram, [sendMessage],
+             json(_{chat_id: ChatID,
+                    text: "hey, what's up?"}),
              _).
 
 % Respond to "callback queries" which look like this:
@@ -375,6 +391,25 @@ grok(readwise(X), schema:hasPart, O) :-
     item(Highlight, text, string, Text),
     know(O, schema:text, Text).
 
+% The thing is, I've realized that this grok thing ought to be
+% a DCG rule that relates a JSON object with a list of triples,
+% using the RDF store for looking up existing resources.
+%
+% Let's try that.  We'll name it `grak'.
+
+grak(telegram, X) -->
+    { itam(X, message/chat/id, ChatID),
+      itam(X, message/message_id, MessageID),
+      dif(S1, S2)
+    },
+    [[S1, nt:telegramId, MessageID],
+     [S1, as:audience, S2],
+     [S2, rdf:type, as:'Group'],
+     [S2, nt:telegramId, ChatID]].
+
+itam(X, Path, Value) :-
+    member(Path-Value, X).
+
 grok :-
     known_event(E, _T),
     E = recv(_, _),
@@ -495,6 +530,40 @@ tldr(Text, TLDR) :-
     ask(Prompt, Result0),
     normalize_space(string(TLDR), Result0).
 
+relevant_fact(Person, Relation, Object) :-
+    rdf(Person, rdf:type, vcard:'Individual'),
+    vcard_fact(Person, Relation, Object).
 
+vcard_fact(Person, Relation, Object) :-
+    rdf(Person, Relation, Object),
+    vcard_relation(Relation).
+
+:- rdf_meta rdf_text(o, -).
+
+rdf_text(X^^xsd:string, X).
+rdf_text(X@en, X).
+rdf_text(X^^xsd:dateTime, X).
+rdf_text(X^^xsd:integer, X).
+rdf_text(X^^xsd:date, X).
+rdf_text(X^^xsd:anyURI, X).
+rdf_text(X, X) :- atom(X), \+ rdf_is_bnode(X).
+
+fact_line(Person, Relation, Object, Line) :-
+    relevant_fact(Person, Relation, Object),
+    rdf(Relation, rdfs:label, Label),
+    rdf_text(Label, LabelText),
+    rdf_text(Object, ObjectText),
+    format(string(Line), "~w: ~w", [LabelText, ObjectText]).
+
+:- rdf_meta vcard_relation(r).
+
+vcard_relation(vcard:fn).
+vcard_relation(vcard:hasEmail).
+vcard_relation(vcard:hasTelephone).
+vcard_relation(vcard:hasAddress).
+vcard_relation(vcard:'additional-name').
+vcard_relation(vcard:'family-name').
+vcard_relation(vcard:'given-name').
+vcard_relation(vcard:bday).
 
 :- debug(openapi).

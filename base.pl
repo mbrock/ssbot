@@ -81,14 +81,13 @@ sync(X) :-
        deny(r, r, o, +).
 
 spew(X) :-
-    rdf_global_id(P:L, X),
-    !,
+    rdf_global_id(P:L, X), !,
     ansi_format(user_output, [faint], "~w:", [P]),
-    ansi_format(user_output, [bold], "~w ", [L]).
+    ansi_format(user_output, [bold], "~w~26|~t ", [L]).
 
 spew(X) :-
     atom(X),
-    ansi_format(user_output, [fg(cyan)], " ~q ", [X]).
+    ansi_format(user_output, [fg(cyan)], "~q", [X]).
 
 spew(X) :-
     is_list(X),
@@ -108,6 +107,14 @@ spew(X) :-
 spew(literal(type(T, X))) :-
     ansi_format(user_output, [fg(green)], "~w ", [X]),
     ansi_format(user_output, [fg(blue)], "[~w] ", [T]).
+
+spew(X^^T) :-
+    ansi_format(user_output, [fg(green)], "~w ", [X]),
+    ansi_format(user_output, [fg(blue)], "[~w] ", [T]).
+
+spew(X@en) :-
+    ansi_format(user_output, [fg(yellow)], "~w ", [X]),
+    ansi_format(user_output, [fg(blue)], "[~w] ", [en]).
 
 spew(P-O) :-
     spew(P, O).

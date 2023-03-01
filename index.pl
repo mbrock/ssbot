@@ -9,7 +9,9 @@
             relevant/3,
             look/2,
             look/2,
-            esbuild/0
+            esbuild/0,
+            sing/1,
+            heading/4
           ]).
 
 :- reexport(otp).
@@ -106,7 +108,7 @@ graph(html, Request) :-
                 href('https://font.node.town/index.css')]),
           link([rel(stylesheet),
                 href('https://fonts.cdnfonts.com/css/univers-lt-pro')]),
-          script([src('tau-prolog.js')], []),
+%          script([src('tau-prolog.js')], []),
           script([src('index.js'), async], []),
           \style
         ],
@@ -322,22 +324,17 @@ site :-
 
 :- dynamic sung/1.
 
-sing(transaction(end(0), _)) :-
-    findall(S-(P-O),
-            sung(rdf(S, P, O, _)),
-            Changes),
+:- rdf_meta sing(t).
 
-    retractall(sung(_)),
-    debug(sing, 'keys ~p~n', [Changes]),
-    keysort(Changes, Sorted),
-    group_pairs_by_key(Sorted, Grouped),
-    dict_create(Dict, rdf, Grouped),
+sing(transaction(end(0), _)) :-
+    findall(Quad, sung(Quad), Quads),
 
     get_time(TimeStamp),
     format_time(string(Time), '%F %T %Z', TimeStamp),
+    
     ansi_format(user_output, [fg(cyan)], '~w~n', [Time]),
-
-    spew(Dict).
+    sing(quads(Quads)),
+    retractall(sung(_)).
 
 sing(assert(S, P, O, G)) :-
     debug(sing, 'Assert ~p', [S]),
@@ -345,6 +342,27 @@ sing(assert(S, P, O, G)) :-
 
 sing(retract(S, P, O, G)) :-
     debug(sing, 'Retract ~w ~w ~w ~w', [S, P, O, G]).
+
+sing(quads(Quads)) :-
+    findall(S-(P-O),
+            member(rdf(S, P, O, _), Quads),
+            Changes),
+
+    retractall(sung(_)),
+    keysort(Changes, Sorted),
+    group_pairs_by_key(Sorted, Grouped),
+    dict_create(Dict, rdf, Grouped),
+
+    spew(Dict).
+
+sing(subject(S)) :-
+    findall(P-O,
+            rdf(S, P, O, _),
+            POs),
+    keysort(POs, Sorted),
+    dict_create(Dict, rdf, [S-Sorted]),
+    nl(user_output),
+    spew(Dict).
 
 site(Port) :-
     catch((http_stop_server(Port, []),
