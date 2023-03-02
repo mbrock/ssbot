@@ -21,14 +21,13 @@
 
 :- use_module(json_fix).
 
-:- use_module(library(ansi_term), [ansi_format/4]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), [(rdf_meta)/1, rdf_load/2]).
 :- use_module(library(semweb/rdf_persistency)).
 :- use_module(library(semweb/rdf_library)).
 :- use_module(library(semweb/rdf_portray), []).
 :- use_module(library(semweb/turtle)).
-:- use_module(library(semweb/rdfa)).
+:- use_module(library(semweb/rdfa), []).
 :- use_module(library(semweb/rdf_ntriples), []).
 :- use_module(library(semweb/rdf_http_plugin)).
 :- use_module(library(semweb/rdf_zlib_plugin)).

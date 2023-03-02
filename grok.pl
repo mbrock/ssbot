@@ -20,12 +20,12 @@
 :- use_module(library(semweb/rdf_db), []).
 :- use_module(library(persistency)).
 :- use_module(library(http/json)).
-:- use_module(library(openapi), [openapi_read/2]).
-:- use_module(qdrant, [embed/2]).
+:- use_module(library(openapi), []).
+:- use_module(qdrant, [embed/3]).
 :- use_module(openai, [completion/3, ask/2, edit/3]).
 :- use_module(base).
-:- use_module(otp, [spin/2]).
 :- use_module(apis).
+
 :- persistent known_event(data:any, time:float).
 :- db_attach("events.db", []).
 
@@ -715,7 +715,7 @@ respond(X) :-
 :- rdf_meta openapi_to_rdf(+, r).
 
 telegram_api :-
-    openapi_read('api/telegram.yaml', Spec),
+    openapi:openapi_read('api/telegram.yaml', Spec),
     openapi_to_rdf(Spec, nt:'api/telegram').
 
 openapi_to_rdf(Spec, API) :-

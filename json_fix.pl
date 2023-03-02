@@ -1,5 +1,16 @@
 :- module(json_fix, []).
 
+% There is a problem with reading JSON that contains emojis,
+% or other characters outside the Basic Multilingual Plane.
+%
+% Key words: UTF-16, surrogate pairs, UTF-8, emojis.
+%
+% JSON allows the encoding of glyphs as UTF-16 surrogate pairs,
+% but the JSON library doesn't handle this correctly.
+%
+% I've submitted a pull request for this upstream.
+% This module is a workaround until the pull request is accepted.
+
 :- reexport(library(http/json)).
 :- use_module(library(clpfd)).
 
@@ -46,24 +57,13 @@ json:escape(0'u, Stream, C) :-
 
 json_emoji("\"\\ud83d\\udc95\"", "💕").
 
-% to print a number in hex, use format/3
-% format(Stream, "~16r", [0x1F495]).
-    
 :- begin_tests(misc).
 
-% Maybe the problem is with reading emojis from JSON.
-%
-% Key words: UTF-16, surrogate pairs, UTF-8, emojis.
-%
-% OK, I now understand that JSON allows the encoding of
-% glyphs as UTF-16 surrogate pairs, but the JSON library
-% might not be able to read those properly?
-
-% test(emoji_json) :-
-%     json_emoji(Json, Text),
-%     open_string(Json, In),
-%     json:json_read_dict(In, Term),
-%     assertion(Term == Text).
+test(emoji_json) :-
+    json_emoji(Json, Text),
+    open_string(Json, In),
+    json:json_read_dict(In, Term),
+    assertion(Term == Text).
     
 :- end_tests(misc).
 
