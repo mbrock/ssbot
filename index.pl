@@ -10,9 +10,7 @@
             look/2,
             look/2,
             esbuild/0,
-            sing/1,
-            heading/4,
-            sing/2
+            heading/4
           ]).
 
 :- reexport(otp).
@@ -283,12 +281,6 @@ handle_json(Id, _MsgId, ["auth", "telegram", Data]) :-
     rdf(Context, nt:socket, Id),
     know(Context, nt:auth, User).
 
-info(X) :-
-    print_message(informational, X).
-
-moan(X) :-
-    print_message(error, X).
-
 dote(Goal) :-
     info(dote(Goal, work)),
     catch(
@@ -301,6 +293,25 @@ dote(Goal) :-
          dote(Goal))),
     info(dote(Goal, done)).
 
+:- multifile prolog:message//1.
+
+prolog:message(dote(Goal, work)) -->
+    ["dote goal "],
+    [ansi([bold,fg(green)], '~p', Goal)].
+
+prolog:message(dote(Goal, fail(E))) -->
+    ["dote goal "],
+    [ansi([bold,fg(green)], '~p', Goal)],
+    [" fail "],
+    [ansi([bold,fg(red)], '~p', E)].
+
+prolog:message(dote(Goal, wait(Seconds))) -->
+    ["dote goal "],
+    [ansi([bold,fg(green)], '~p', Goal)],
+    [" wait "],
+    [ansi([bold,fg(yellow)], '~D', Seconds)],
+    [" secs"].
+
 dial :-
     spin(discord, dote(discord)),
     spin(telegram, dote(telegram)).
@@ -308,6 +319,7 @@ dial :-
 site :-
     graph_url(G),
     format("%% nt: using graph ~w~n", [G]),
+    
     rdf_create_graph(G),
     rdf_default_graph(_, G),
 
@@ -320,56 +332,6 @@ site :-
     ;   site(4001)
     ->  true
     ).
-
-:- use_module(library(ansi_term), [ansi_format/4]).
-
-:- dynamic sung/1.
-
-:- rdf_meta sing(t).
-:- rdf_meta sing(@, t).
-
-sing(transaction(end(0), _)) :-
-    findall(Quad, sung(Quad), Quads),
-
-    get_time(TimeStamp),
-    format_time(string(Time), '%F %T %Z', TimeStamp),
-    
-    ansi_format([fg(cyan)], '~w~n', [Time]),
-    sing(quads(Quads)),
-    retractall(sung(_)).
-
-sing(assert(S, P, O, G)) :-
-    debug(sing, 'Assert ~p', [S]),
-    assertz(sung(rdf(S, P, O, G))).
-
-sing(retract(S, P, O, G)) :-
-    debug(sing, 'Retract ~w ~w ~w ~w', [S, P, O, G]).
-
-sing(quads(Quads)) :-
-    findall(S-(P-O),
-            member(rdf(S, P, O, _), Quads),
-            Changes),
-
-    retractall(sung(_)),
-    keysort(Changes, Sorted),
-    group_pairs_by_key(Sorted, Grouped),
-    dict_create(Dict, rdf, Grouped),
-
-    spew(Dict).
-
-sing(subject(S)) :-
-    findall(P-O,
-            rdf(S, P, O, _),
-            POs),
-    keysort(POs, Sorted),
-    dict_create(Dict, rdf, [S-Sorted]),
-    nl,
-    spew(Dict).
-
-sing(string(String), X) :-
-    with_output_to(
-        string(String),
-        sing(X)).
 
 site(Port) :-
     catch((http_stop_server(Port, []),

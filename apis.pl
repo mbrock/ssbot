@@ -11,7 +11,6 @@
 :- use_module(library(http/http_client)).
 :- use_module(library(http/http_json)).
 :- use_module(library(apply_macros)).
-:- use_module(library(openapi), [openapi_read/2]).
 
 bearer_prefix(discord, "Bot").
 bearer_prefix(readwise, "Token").
@@ -22,6 +21,7 @@ base_url(discord, "https://discord.com/api/v10/").
 base_url(urbion, "http://urbion/epap/").
 base_url(readwise, "https://readwise.io/api/v2/").
 base_url(qdrant, "http://hamlet:6333/").
+base_url(etherscan, "https://api.etherscan.io/").
 
 base_url(telegram, URL) :-
     secret(telegram, Token),
@@ -88,6 +88,6 @@ api_get(Service, PathComponents, QueryParams, Result) :-
     debug(http(readwise), "GET ~w", [URL]),
     http_get(URL, Result,
              [request_header('Authorization'=Auth),
-              request_header('User-Agent'=UserAgent),
+              % request_header('User-Agent'=UserAgent),
               json_object(dict)]).
 

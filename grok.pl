@@ -14,7 +14,10 @@
            fuse/1,
            save/1,
            telegram_update/3,
-           item/3
+           item/3,
+           erc20/3,
+           sing/1,
+           nuke/1
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -499,10 +502,10 @@ grok(readwise(X), schema:hasPart, O) :-
 has(X, Path, Value) :-
     member(Path-Value, X).
 
-:- op(920, fy, >-).
->- X --> [X].
+% Set rdf_meta on the >- operator so that we can use it in
+% the DCG rule below.
 
-:- op(920, fy, -<).
+:- op(921, fy, -<).
 -< [D, P, V] --> {item(D, P, V)}.
 
 example(telegram_update, _{
@@ -625,7 +628,77 @@ telegram_user_name(X, URL) -->
     >- [URL, as:name, FirstName],
     >- [URL, schema:givenName, FirstName].
 
-:- debug(grak).
+% Etherscan ERC20 transactions
+
+example_tx(_{ blockHash: "0xffe0df860e1a17f25d6e21c646bbcb70459ee1a2d2360f26dcd9907416044b1b",
+              blockNumber:"5554014",
+              confirmations:"11186137",
+              contractAddress:"0xd3ace836e47f7cf4948dffd8ca2937494c52580c",
+              cumulativeGasUsed:"6240803",
+              from:"0x0000000000000000000000000000000000000000",
+              gas:"4000000",
+              gasPrice:"6000000000",
+              gasUsed:"3406248",
+              hash:"0x22bdf92963263b452ccf1e2ba939b440241914c2c719b2fc7bef419f86714088",
+              input: "deprecated",
+              nonce:"368",
+              timeStamp:"1525424510",
+              to:"0x12f3a4f6deaebf4d8c78f66875a7af8d923c6752",
+              tokenDecimal:"18",
+              tokenName:"Free BOB Tokens - BobsRepair.com",
+              tokenSymbol:"BOBx",
+              transactionIndex:"83",
+              value:"1500000000000000000000"}).
+              
+erc20(X) -->
+    -< [X, hash, Hash],
+    -< [X, timeStamp, UnixTimeString],
+    -< [X, from, SrcAddress],
+    -< [X, to, DstAddress],
+    -< [X, value, ValueString],
+    -< [X, tokenSymbol, Symbol],
+    -< [X, tokenName, Name],
+    -< [X, tokenDecimal, DecimalString],
+    -< [X, contractAddress, GemAddress],
+
+    { number_string(Decimals, DecimalString) },
+    { number_string(Value, ValueString) },
+    { number_string(UnixTime, UnixTimeString) },
+    { format(string(EtherscanURL),
+             "https://etherscan.io/tx/~w", [Hash]) },
+    
+    >- [Txn, eth:txHash, Hash^^xsd:string],
+    >- [Src, eth:address, SrcAddress^^xsd:string],
+    >- [Dst, eth:address, DstAddress^^xsd:string],
+    >- [Gem, eth:address, GemAddress^^xsd:string],
+
+    >- [Txn, rdf:type, erc20:'TokenTransfer'],
+    >- [Txn, rdf:type, eth:'Tx'],
+    >- [Gem, rdf:type, erc20:'ERC20Token'],
+    >- [Src, rdf:type, eth:'Account'],
+    >- [Dst, rdf:type, eth:'Account'],
+    
+    >- [Gem, erc20:decimals, Decimals^^xsd:integer],
+    >- [Gem, erc20:name, Name^^xsd:string],
+    >- [Gem, erc20:symbol, Symbol^^xsd:string],
+
+    >- [Txn, eth:txTime, UnixTime^^xsd:dateTime],
+    >- [Txn, eth:from, Src],
+    >- [Txn, eth:to, Gem],
+    >- [Txn, erc20:from, Src],
+    >- [Txn, erc20:to, Dst],
+    >- [Txn, erc20:token, Gem],
+    >- [Txn, erc20:value, Value^^xsd:integer],
+    >- [Txn, rdfs:seeAlso, EtherscanURL^^xsd:anyURI],
+    
+    ok.
+
+nuke(Type) :-
+    rdf(S, rdf:type, Type),
+    sing(subject(S)),
+    deny(S, _, _),
+    deny(_, _, S),
+    deny(_, S, _).
 
 % OK, now we'll get these lists of triples containing free variables.
 % Subjects and objects can be free variables.
@@ -634,9 +707,10 @@ telegram_user_name(X, URL) -->
 % If we don't find one, we'll create a new one.
 
 fuse(triples(Triples)) :-
-    maplist(fuse, Triples).
+    maplist(fuse(1), Triples),
+    maplist(fuse(2), Triples).
 
-fuse([S, P, O]) :-
+fuse(1, [S, P, O]) :-
     var(S),
     ground(P),
     ground(O),
@@ -645,7 +719,7 @@ fuse([S, P, O]) :-
     !,
     debug(grak, 'link ~w ~w ~w', [S, P, O]).
 
-fuse([S, P, O]) :-
+fuse(2, [S, P, O]) :-
     var(S),
     ground(P),
     ground(O),
@@ -653,13 +727,73 @@ fuse([S, P, O]) :-
     !,
     debug(grak, 'mint ~w ~w ~w', [S, P, O]).
 
-fuse([_S, _P, _O]).
+fuse(_, [_S, _P, _O]).
+
+% :- debug(grak).
 
 save(triples(Triples)) :-
     maplist(save, Triples).
 
 save([S, P, O]) :-
+    debug(grak, 'save ~w ~w ~w', [S, P, O]),
+%    spew(S, P, O),
     know(S, P, O).
+
+save(erc20(X)) :-
+    phrase(erc20(X), Triples),
+    fuse(triples(Triples)),
+    rdf_transaction(save(triples(Triples)), save(erc20(X))).
+
+:- rdf_meta save(t).
+:- rdf_meta fuse(t).
+
+:- dynamic sung/1.
+
+:- rdf_meta sing(t).
+:- rdf_meta sing(@, t).
+
+sing(transaction(end(0), _)) :-
+    findall(Quad, sung(Quad), Quads),
+
+    get_time(TimeStamp),
+    format_time(string(Time), '%F %T %Z', TimeStamp),
+    
+    ansi_format([fg(cyan)], '~w~n', [Time]),
+    sing(quads(Quads)),
+    retractall(sung(_)).
+
+sing(assert(S, P, O, G)) :-
+    debug(sing, 'Assert ~p', [S]),
+    assertz(sung(rdf(S, P, O, G))).
+
+sing(retract(S, P, O, G)) :-
+    debug(sing, 'Retract ~w ~w ~w ~w', [S, P, O, G]).
+
+sing(quads(Quads)) :-
+    findall(S-(P-O),
+            member(rdf(S, P, O, _), Quads),
+            Changes),
+
+    retractall(sung(_)),
+    keysort(Changes, Sorted),
+    group_pairs_by_key(Sorted, Grouped),
+    dict_create(Dict, rdf, Grouped),
+
+    spew(Dict).
+
+sing(subject(S)) :-
+    findall(P-O,
+            rdf(S, P, O, _),
+            POs),
+    keysort(POs, Sorted),
+    dict_create(Dict, rdf, [S-Sorted]),
+    nl,
+    spew(Dict).
+
+sing(string(String), X) :-
+    with_output_to(
+        string(String),
+        sing(X)).
 
 grok :-
     known_event(E, _T),

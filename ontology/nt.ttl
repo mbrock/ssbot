@@ -14,6 +14,9 @@
 @prefix as: <http://www.w3.org/ns/activitystreams#> .
 @prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
 
+@prefix eth: <http://ethon.consensys.net/> .
+@prefix erc20: <http://erc20.consensys.net/ERC20/> .
+
 @prefix nt: <https://node.town/> .
 @prefix code: <https://node.town/code/> .
 
@@ -284,6 +287,13 @@ nt:readwiseId a owl:DatatypeProperty ;
     rdfs:label "Readwise ID" ;
     rdfs:domain as:Object ;
     rdfs:range xsd:integer .
+
+nt:ethereum a as:Service ;
+    as:name "Ethereum" ;
+    as:url <https://ethereum.org> .
+
+eth:address nt:idScope nt:ethereum .
+eth:txHash nt:idScope nt:ethereum .
 
 nt:payload a owl:DatatypeProperty ;
     rdfs:label "payload" ;

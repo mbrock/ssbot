@@ -15,8 +15,14 @@
             spew/4,
             spew/3,
             spew/1,
+            json_string/2,
+            ok/2,
+            shew/3,
+            moan/1,
+            shew/4,
+            triples_descriptions/2,
             op(920, fy, *),
-            json_string/2
+            op(921, fy, >-)
           ]).
 
 :- use_module(json_fix).
@@ -35,7 +41,18 @@
 :- use_module(library(sweet)).
 
 :- op(920, fy, *).
-*_.
+* _.
+
+:- op(921, fy, >-).
+>- X --> [X].
+
+:- rdf_meta >-(t, ?, ?).
+
+info(X) :-
+    print_message(informational, X).
+
+moan(X) :-
+    print_message(error, X).
 
 json_string(JSON, String) :-
     ground(String),
@@ -80,7 +97,10 @@ load :-
     rdf_load_library(dc),
     rdf_load_library(schema),
     rdf_load_library(foaf),
-    rdf_load_library(vcard).
+    rdf_load_library(vcard),
+    rdf_load_library(eth),
+    rdf_load_library(erc20),
+    rdf_load_library(valueflows).
 
 graph_url('https://node.town/graph').
 
@@ -170,7 +190,79 @@ deny(S, P, O) :-
     deny(S, P, O, _).
 
 deny(S, P, O, G) :-
+    foreach(rdf(S, P, O, G),
+            info(deny(S, P, O, G))),
     rdf_retractall(S, P, O, G).
+
+ok --> [].    
+
+:- multifile prolog:message//1.
+
+prolog:message(shew(X)) -->
+    shew(X).
+
+prolog:message(shew(S, POs)) -->
+    shew(S, POs).
+
+shew(X) -->
+    { atom(X),
+      rdf_global_id(P:L, X) },
+    !,
+    >- ansi([fg('#999999')], '~w', [P]),
+    >- ansi([fg(default)], ':', []),
+    >- ansi([fg(default), bold], '~w~26|~t ', [L]).
+
+shew(X) -->
+    { atom(X) },
+    !,
+    >- ansi([fg(cyan)], '~w', [X]).
+
+shew(X^^T) -->
+    { atom(T),
+      rdf_global_id(P:L, T) },
+    >- ansi([fg(green)], '~w', [X]),
+    % >- ansi([fg(blue)], ' [~w:~w] ', [P, L]),
+    ok.
+
+shew(X@Lang) -->
+    >- ansi([fg(yellow)], '~w', [X]),
+    >- ansi([fg(blue)], ' [~w] ', [Lang]).
+
+shew([]) -->
+    [].
+
+shew([H|T]) -->
+    shew(H),
+    shew(T).
+
+shew(P-O) -->
+    >- ' • ',
+    shew(P),
+    >- ' => ',
+    shew(O),
+    >- nl.
+
+shew(S, POs) -->
+    shew(S),
+    >- nl,
+    shew(POs).
+
+shew(descriptions, []) -->
+    [].
+
+shew(descriptions, [(S-POs)|T]) -->
+    shew(S, POs),
+    shew(descriptions, T),
+    >- nl.
+
+triples_descriptions(Triples, Descriptions) :-
+    findall(S-(P-O), member([S, P, O], Triples), T1),
+    keysort(T1, T2),
+    group_pairs_by_key(T2, Descriptions).
+
+:- rdf_meta subject_triples(r, -).
+subject_triples(S, Triples) :-
+    findall([S, P, O], rdf(S, P, O), Triples).
 
 :- rdf_meta turn(t, t).
 turn(tired(S0, P0, O0), wired(S1, P1, O1)) :-

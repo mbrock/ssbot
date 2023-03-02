@@ -16,6 +16,7 @@ secret_env(readwise, "READWISE_TOKEN").
 secret_env(spotify_id, "SPOTIFY_ID").
 secret_env(spotify, "SPOTIFY_SECRET").
 secret_env(pirate_weather, "PIRATE_WEATHER_API_KEY").
+secret_env(etherscan, "ETHERSCAN_API_KEY").
 
 secret(urbion, "n/a").
 secret(qdrant, "n/a").
