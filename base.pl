@@ -13,8 +13,13 @@
             open/1,
             load/0,
             spew/4,
-            spew/1
+            spew/3,
+            spew/1,
+            op(920, fy, *),
+            json_string/2
           ]).
+
+:- use_module(json_fix).
 
 :- use_module(library(ansi_term), [ansi_format/4]).
 :- use_module(library(semweb/rdf11)).
@@ -30,9 +35,21 @@
 :- use_module(library(http/http_ssl_plugin)).
 :- use_module(library(sweet)).
 
-:- op(920,fy, *).
-
+:- op(920, fy, *).
 *_.
+
+json_string(JSON, String) :-
+    ground(String),
+    !,
+    open_string(String, In),
+    json_read_dict(In, JSON).
+
+json_string(JSON, String) :-
+    var(String),
+    !,
+    with_output_to(
+        string(String),
+        json_write_dict(current_output, JSON, [width(72)])).
 
 :- dynamic user:file_search_path/2.
 :- multifile user:file_search_path/2.
@@ -173,7 +190,8 @@ randseqs(K, N, Seq) :-
 
 mint(url(X)) :-
     mint(atom(A)),
-    format(atom(X), "https://id.node.town/~s", A).
+    format(atom(X), "https://id.node.town/~s", A),
+    * format(user_error, "mint ~w~n", [X]).
 
 mint(atom(A)) :-
     mint(key(T, X)),

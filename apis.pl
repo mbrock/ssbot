@@ -47,6 +47,7 @@ user_agent(_, "node.town").
 hush(qdrant).
 
 api_post(Service, PathComponents, Body, Result) :-
+    debug(apis, "POST ~w ~w ~w", [Service, PathComponents, Body]),
     atomics_to_string(PathComponents, "/", Path),
     once(api_auth(Service, Auth)),
     api_url(Service, Path, URL),
@@ -63,6 +64,7 @@ api_post(Service, PathComponents, Result) :-
     api_post(Service, PathComponents, json(_{}), Result).
 
 api_put(Service, PathComponents, Body, Result) :-
+    debug(apis, "PUT ~w ~w ~w", [Service, PathComponents, Body]),
     atomics_to_string(PathComponents, "/", Path),
     once(api_auth(Service, Auth)),
     api_url(Service, Path, URL),
@@ -76,6 +78,7 @@ api_put(Service, PathComponents, Body, Result) :-
     ; true ).
 
 api_get(Service, PathComponents, QueryParams, Result) :-
+    debug(apis, "GET ~w ~w ~w", [Service, PathComponents, QueryParams]),
     user_agent(Service, UserAgent),
     once(api_auth(Service, Auth)),
     uri_query_components(Query, QueryParams),

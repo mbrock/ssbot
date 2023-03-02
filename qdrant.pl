@@ -1,7 +1,8 @@
 :- module(qdrant, [setup/0,
                    save_old_embeddings/0,
                    save_points/2,
-                   search/3
+                   search/3,
+                   embed/3
                   ]).
 
 :- use_module(apis).
@@ -77,5 +78,12 @@ save_old_embeddings :-
     string_concat("https://node.town/", UUID, URL),
     Payload = _{text: Text},
     Point = _{id: UUID, payload: Payload, vector: Embedding},
+    save_points([Point], Result),
+    debug(qdrant, 'save point: ~w', [Result]).
+
+embed(Text, Payload, UUID) :-
+    uuid(UUID),
+    embedding(Text, Embedding),
+    Point = _{payload: Payload, vector: Embedding, id: UUID},
     save_points([Point], Result),
     debug(qdrant, 'save point: ~w', [Result]).

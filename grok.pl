@@ -10,16 +10,20 @@
            grok_all/1,
            relevant_fact/3,
            fact_line/4,
-           grak/4
+           search/2,
+           fuse/1,
+           save/1,
+           telegram_update/3,
+           item/3
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
 :- use_module(library(persistency)).
 :- use_module(library(http/json)).
 :- use_module(library(openapi), [openapi_read/2]).
-:- use_module(qdrant, []).
-:- use_module(openai, [completion/3, ask/2]).
-:- use_module(base, [mint/1, know/3]).
+:- use_module(qdrant, [embed/2]).
+:- use_module(openai, [completion/3, ask/2, edit/3]).
+:- use_module(base).
 :- use_module(otp, [spin/2]).
 :- use_module(apis).
 :- persistent known_event(data:any, time:float).
@@ -71,6 +75,54 @@ study(Query, Result) :-
     ask(Prompt, Result0),
     normalize_space(string(Result), Result0).
 
+search(Query, Answers) :-
+    qdrant:search(Query, 10, Results),
+    debug(telegram, "Results: ~w", [Results]),
+    findall(Answer,
+            (   member(Result, Results.result),
+                Text = Result.payload.text,
+                answer(Text, Answer)
+            ),
+            Answers).
+
+answer(Text, Answer) :-
+    book_answer(Text, Answer), !.
+
+answer(Text, Answer) :-
+    correspondence_answer(Text, Answer), !.
+
+book_answer(Text, Answer) :-
+    rdf(Topic, schema:text, Text^^xsd:string),
+    rdf(Topic, schema:isPartOf, Source),
+    rdf(Source, rdfs:label, Title@en),
+    rdf(Source, schema:author, Author^^xsd:string),
+    format(string(Attribution), "~w, ~w", [Author, Title]),
+    format(string(Content), "\"~w\"~n~n—~w", [Text, Attribution]),
+    rdf(Source, schema:image, Image^^xsd:anyURI),
+    Answer = _{ type: article,
+                id: Topic,
+                title: Attribution,
+                input_message_content: _{message_text: Content},
+                description: Text,
+                thumb_url: Image
+              }.
+
+correspondence_answer(Text, Answer) :-
+        rdf(Topic, as:content, Text^^xsd:string),
+        rdf(Topic, as:attributedTo, Source),
+        Title = "correspondence",
+        rdf(Source, schema:givenName, Author^^xsd:string),
+        format(string(Attribution), "~w, ~w", [Author, Title]),
+        format(string(Content), "\"~w\"~n~n—~w", [Text, Attribution]),
+        format(string(ImageUrl), "https://i.pravatar.cc/300?u=~w", [Author]),
+        Answer = _{ type: article,
+                        id: Topic,
+                        title: Attribution,
+                        input_message_content: _{message_text: Content},
+                        description: Text,
+                        thumb_url: ImageUrl
+                  }.
+
 %   True if the relation indicates an ID with a scope,
 %   e.g. a "Telegram ID" or a "Twitter ID".
 %
@@ -106,6 +158,10 @@ item(Dict, Path, Type, Value) :-
     is_dict(Dict),
     Value = Dict.get(Path),
     call(Type, Value).
+
+item(Dict, Path, Value) :-
+    is_dict(Dict),
+    Value = Dict.get(Path).
 
 json(X, Data) :-
     with_output_to(
@@ -161,6 +217,10 @@ grok(recv(telegram, X), nt:telegramId, V) :-
 grok(recv(telegram, X), as:content, V) :-
     item(X, message/text, string, V).
 
+grok(recv(telegram, X), nt:embeddingId, UUID) :-
+    item(X, message/text, string, Text),
+    qdrant:embed(Text, _{text: Text}, UUID).
+
 grok(recv(telegram, X), as:published, V) :-
     item(X, message/date, number, Timestamp),
     unix_date(Timestamp, V).
@@ -173,6 +233,9 @@ grok(recv(telegram, X), as:attributedTo, V) :-
 
 grok(recv(telegram, X), as:inReplyTo, V) :-
     item(X, message/reply_to_message/message_id, integer, V).
+
+grok(recv(telegram, X), nt:koko, nt:me) :-
+    item(X, message/reply_to_message/from/username, string, "riga_ss_bot").
 
 grok(recv(telegram, X), as:audience, nt:me) :-
     item(X, message/chat/type, string, "private").
@@ -208,35 +271,12 @@ grok(recv(telegram, X), rdf:type, nt:'Query') :-
     string_length(Query, Len),
     Len > 3,
     item(X, inline_query/id, string, ID),
-    qdrant:search(Query, 20, Results),
-    debug(telegram, "Results: ~w", [Results]),
-    findall(Answer,
-            (   member(Result, Results.result),
-                Text = Result.payload.text,
-                rdf(Topic, schema:text, Text^^xsd:string),
-                rdf(Topic, schema:isPartOf, Source),
-                rdf(Source, rdfs:label, Title@en),
-                rdf(Source, schema:author, Author^^xsd:string),
-                format(string(Attribution), "~w, ~w", [Author, Title]),
-                format(string(Content), "\"~w\"~n~n—~w", [Text, Attribution]),
-                rdf(Source, schema:image, Image^^xsd:anyURI),
-%                ReplyMarkup = _{inline_keyboard: [[_{text: "tldr",
-%                                                     callback_data: "tldr"}]]},
-                Answer = _{ type: article,
-                            id: Topic,
-                            title: Attribution,
-                            input_message_content: _{message_text: Content},
-                            description: Text,
-                            thumb_url: Image
-                          }
-            ),
-            Answers),
-    
+    search(Query, Answers),
     api_post(telegram, [answerInlineQuery],
              json(_{inline_query_id: ID, results: Answers}),
              _).
 
-grok(recv(telegram, X), nt:command, "ask"^^xsd:string) :-
+grok(recv(telegram, X), nt:command, "study"^^xsd:string) :-
     item(X, message/text, string, Text),
     string_concat("/study ", Theme, Text),
     once(study(Theme, Answer)),
@@ -244,6 +284,44 @@ grok(recv(telegram, X), nt:command, "ask"^^xsd:string) :-
              json(_{chat_id: X.message.chat.id,
                     text: Answer}),
              _).
+
+grok(recv(telegram, X), nt:command, "ask"^^xsd:string) :-
+    item(X, message/text, string, Text),
+    item(X, message/message_id, integer, MessageID),
+    item(X, message/chat/id, integer, ChatID),
+    string_concat("/ask ", Question, Text),
+    % Use the question in a GPT-3 prompt that requests an answer.
+    format(string(Prompt), "Q: ~w\nA:", [Question]),
+    once(ask(Prompt, Answer)),
+    % Send the answer as a reply to the original message.
+    api_post(telegram, [sendMessage],
+             json(_{chat_id: ChatID,
+                    text: Answer,
+                    reply_to_message_id: MessageID}),
+             _).
+
+
+% The command "/code <something>" will ask OpenAI Codex to generate
+% code for <something>.  The result is sent as a reply to the
+% original message.
+
+grok(recv(telegram, X), nt:command, "code"^^xsd:string) :-
+    false,
+    item(X, message/text, string, Text),
+    item(X, message/message_id, integer, MessageID),
+    item(X, message/chat/id, integer, ChatID),
+    string_concat("/code ", Prompt, Text),
+    once(edit("example(foo).", Prompt, Answer)),
+    % Send the answer as a reply to the original message.
+    api_post(telegram, [sendMessage],
+             json(_{chat_id: ChatID,
+                    text: Answer.text,
+                    reply_to_message_id: MessageID}),
+             Response),
+    find(Answer, nt:telegramId, Response.result.message_id),
+    json(Answer, Response.result),
+    know(Answer, as:inReplyTo, X.message.message_id),
+    know(Answer, as:generator, nt:codex).
 
 grok(recv(telegram, X), nt:command, "info"^^xsd:string) :-
     item(X, message/text, string, Text),
@@ -417,21 +495,171 @@ grok(readwise(X), schema:hasPart, O) :-
 % The thing is, I've realized that this grok thing ought to be
 % a DCG rule that relates a JSON object with a list of triples,
 % using the RDF store for looking up existing resources.
-%
-% Let's try that.  We'll name it `grak'.
 
-grak(telegram, X) -->
-    { itam(X, message/chat/id, ChatID),
-      itam(X, message/message_id, MessageID),
-      dif(S1, S2)
-    },
-    [[S1, nt:telegramId, MessageID],
-     [S1, as:audience, S2],
-     [S2, rdf:type, as:'Group'],
-     [S2, nt:telegramId, ChatID]].
-
-itam(X, Path, Value) :-
+has(X, Path, Value) :-
     member(Path-Value, X).
+
+:- op(920, fy, >-).
+>- X --> [X].
+
+:- op(920, fy, -<).
+-< [D, P, V] --> {item(D, P, V)}.
+
+example(telegram_update, _{
+  message: _{
+    chat: _{
+      all_members_are_administrators: true,
+      id: -866045078,
+      title: "Node.Town Bot",
+      type: "group"
+    },
+    date: 1677722672,
+    from: _{
+      first_name: "Mikael",
+      id: 362441422,
+      is_bot: false,
+      is_premium: true,
+      language_code: "en",
+      last_name: "Brockman",
+      username: "mbrockman"
+    },
+    message_id: 6281,
+    text: "gör avancerade saker med unification"
+  },
+  update_id: 289125495
+}).
+
+payload(X, URL) -->
+    { json_string(X, JSON) },
+    >- [URL, nt:payload, JSON^^nt:json].
+
+telegram_update(X) -->
+    payload(X, URL),
+    -< [X, update_id, ID],
+    >- [URL, nt:telegramId, ID],
+    telegram_activity(X, URL).
+
+telegram_activity(X, URL) -->
+    payload(X, URL),
+    -< [X, message, Message],
+    >- [URL, rdf:type, as:'Create'],
+    >- [URL, as:object, MessageURL],
+    telegram_message(Message, MessageURL).
+
+telegram_message(X, URL) -->
+    payload(X, URL),
+    -< [X, message_id, ID],
+    -< [X, date, UnixTime],
+    -< [X, chat, Chat],
+    >- [URL, nt:telegramId, ID],
+    >- [URL, rdf:type, as:'Note'],
+    >- [URL, as:published, UnixTime],
+    >- [URL, as:audience, ChatURL],
+    telegram_chat(Chat, ChatURL),
+    telegram_message_content(X, URL),
+    telegram_message_author(X, URL, ChatURL),
+    telegram_message_parent(X, URL).
+
+telegram_chat(X, URL) -->
+    payload(X, URL),
+    -< [X, id, ID],
+    >- [URL, nt:telegramId, ID],
+    telegram_chat_type(X, URL).
+
+telegram_message_content(X, URL) -->
+    -< [X, text, Text],
+    >- [URL, as:content, Text].
+
+telegram_chat_type(X, URL) -->
+    -< [X, type, "private"],
+    -< [X, first_name, FirstName],
+    -< [X, last_name, LastName],
+    { format(string(Name), "~w ~w", [FirstName, LastName]) },
+    >- [URL, rdf:type, as:'Person'],
+    >- [URL, as:name, Name].
+
+telegram_chat_type(X, URL) -->
+    -< [X, type, "group"],
+    -< [X, title, Title],
+    >- [URL, rdf:type, as:'Group'],
+    >- [URL, as:name, Title].
+
+telegram_message_author(X, URL, ChatURL) -->
+    -< [X, from, From],
+    >- [AuthorURL, as:partOf, ChatURL],
+    >- [URL, as:attributedTo, AuthorURL],
+    telegram_user(From, AuthorURL).
+
+telegram_message_parent(X, URL) -->
+    -< [X, reply_to_message, ReplyTo],
+    !,
+    >- [URL, as:inReplyTo, ReplyToURL],
+    telegram_message(ReplyTo, ReplyToURL).
+
+telegram_message_parent(_X, _URL) -->
+    [].
+
+telegram_user(X, URL) -->
+    -< [X, id, ID],
+    >- [URL, nt:telegramId, ID],
+    telegram_user_type(X, URL),
+    telegram_user_name(X, URL).
+
+telegram_user_type(X, URL) -->
+    -< [X, is_bot, true],
+    >- [URL, rdf:type, as:'Service'].
+
+telegram_user_type(X, URL) -->
+    -< [X, is_bot, false],
+    >- [URL, rdf:type, as:'Person'].
+
+telegram_user_name(X, URL) -->
+    -< [X, first_name, FirstName],
+    -< [X, last_name, LastName],
+    !,
+    { format(string(Name), "~w ~w", [FirstName, LastName]) },
+    >- [URL, as:name, Name].
+
+telegram_user_name(X, URL) -->
+    -< [X, first_name, FirstName],
+    >- [URL, as:name, FirstName],
+    >- [URL, schema:givenName, FirstName].
+
+:- debug(grak).
+
+% OK, now we'll get these lists of triples containing free variables.
+% Subjects and objects can be free variables.
+% We'll use the RDF store to look up existing resources.
+% If we find one, we'll use it.
+% If we don't find one, we'll create a new one.
+
+fuse(triples(Triples)) :-
+    maplist(fuse, Triples).
+
+fuse([S, P, O]) :-
+    var(S),
+    ground(P),
+    ground(O),
+    rdf(P, nt:idScope, _),
+    rdf(S, P, O),
+    !,
+    debug(grak, 'link ~w ~w ~w', [S, P, O]).
+
+fuse([S, P, O]) :-
+    var(S),
+    ground(P),
+    ground(O),
+    mint(url(S)),
+    !,
+    debug(grak, 'mint ~w ~w ~w', [S, P, O]).
+
+fuse([_S, _P, _O]).
+
+save(triples(Triples)) :-
+    maplist(save, Triples).
+
+save([S, P, O]) :-
+    know(S, P, O).
 
 grok :-
     known_event(E, _T),
@@ -590,3 +818,7 @@ vcard_relation(vcard:'given-name').
 vcard_relation(vcard:bday).
 
 :- debug(openapi).
+
+today(DateTime) :-
+    get_time(Now),
+    stamp_date_time(Now, DateTime, local).

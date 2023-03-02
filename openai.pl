@@ -10,7 +10,11 @@
           , known_similarity/3
           , similarity_search/3
           , ask/2
-          , ask/1
+          , ask/1,
+            edit/3,
+            chat/3,
+            chat/2,
+            chat/4
           ]).
 
 :- use_module(base).
@@ -33,6 +37,37 @@ completion(Prompt, Engine, Options, Completion) :-
     put_dict(_{prompt: Prompt}, Options, Options2),
     api_post(openai, Path, json(Options2), Result),
     member(Completion, Result.choices).
+
+json_chat([]) --> [].
+json_chat([(Role - Content)|T]) -->
+    [json{role: Role, content: Content}],
+    json_chat(T).
+
+chat(Lines, Message) :-
+    chat(Lines, _{}, Message).
+
+chat(Lines, Options, Message) :-
+    chat(Lines, "gpt-3.5-turbo", Options, Message).
+
+chat(Chat, Model, Options, Message) :-
+    Path = ["v1", "chat", "completions"],
+    phrase(json_chat(Chat), ChatJSON),
+    put_dict(_{model: Model, messages: ChatJSON}, Options, Options2),
+    api_post(openai, Path, json(Options2), Result),
+    member(Message, Result.choices).
+
+edit(Input, Instruction, Options, Output) :-
+    % Use the /edits endpoint.
+    % https://platform.openai.com/docs/api-reference/edits/create
+    Path = ["v1", "edits"],
+    put_dict(_{input: Input, instruction: Instruction}, Options, Options2),
+    api_post(openai, Path, json(Options2), Result),
+    debug(apis, "Result: ~p", [Result]),
+    member(Output, Result.choices).
+
+edit(Input, Instruction, Answer) :-
+    Options = _{temperature: 0.2, model: "code-davinci-edit-001"},
+    once(edit(Input, Instruction, Options, Answer)).
 
 embedding_model("text-embedding-ada-002").
 
@@ -97,3 +132,5 @@ ask(Question, Answer) :-
 ask(Question) :-
     ask(Question, Answer),
     format("~s~n", [Answer]).
+
+
