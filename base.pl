@@ -1,5 +1,7 @@
 :- module(base,
           [ know/3,
+            info/1,
+            moan/1,
             deny/3,
             dump/1,
             deny/4,
@@ -18,6 +20,7 @@
             json_string/2,
             ok/2,
             shew/3,
+            show/1,
             moan/1,
             shew/4,
             triples_descriptions/2,
@@ -321,3 +324,8 @@ dump(String, Goal) :-
 dump(default) :-
     turtle(user_output, default).
 
+:- rdf_meta show(r).
+show(S) :-
+    subject_triples(S, Triples),
+    triples_descriptions(Triples, [S-POs]),
+    info(shew(S, POs)).

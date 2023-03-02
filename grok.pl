@@ -17,7 +17,9 @@
            item/3,
            erc20/3,
            sing/1,
-           nuke/1
+           nuke/1,
+           finance/3,
+           show/1
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -956,3 +958,17 @@ vcard_relation(vcard:bday).
 today(DateTime) :-
     get_time(Now),
     stamp_date_time(Now, DateTime, local).
+
+:- rdf_meta finance(r, ?, ?).
+finance(Person, Account, [Txn, Symbol, Amount]) :-
+    rdf(Person, eth:controlsAccount, Account),
+    ( rdf(Txn, erc20:from, Account)
+    ; rdf(Txn, erc20:to, Account)
+    ),
+    rdf(Txn, erc20:value, Cents^^xsd:integer),
+    rdf(Txn, erc20:token, Token),
+    rdf(Token, erc20:symbol, Symbol^^xsd:string),
+    rdf(Token, erc20:decimals, Decimals^^xsd:integer),
+    Amount is Cents / (10 ** Decimals),
+    true.
+
