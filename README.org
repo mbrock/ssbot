@@ -1,9 +1,11 @@
-> How can this queer cosmic town, with its many-legged citizens, with
-> its monstrous and ancient lamps, how can this world give us at once
-> the fascination of a strange town and the comfort and honour of
-> being our own town?
->
-> -- Gilbert Keith Chesterton, 1908
+#+BEGIN_QUOTE
+How can this queer cosmic town, with its many-legged citizens, with
+its monstrous and ancient lamps, how can this world give us at once
+the fascination of a strange town and the comfort and honour of
+being our own town?
+
+---Gilbert Keith Chesterton, 1908
+#+END_QUOTE
 
 Node.Town is not a software project but a software quest.  Its goals
 are uncertain, its methods are unproven, and its outcomes are unknown.
