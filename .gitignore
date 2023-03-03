@@ -1,16 +1,10 @@
-.envrc.private
-
-# Devenv
-.devenv*
-devenv.local.nix
-
-# Database files
 *.db
 *.db-*
-
+*.secret.*
 *~
-
+.devenv*
+.emacs-history
+.envrc.private
 /data
 /transient
-
-*.secret.*
+devenv.local.nix

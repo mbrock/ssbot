@@ -3,8 +3,8 @@
 
 (setq savehist-minibuffer-history-variables '(xref--read-identifier-history minibuffer-history file-name-history extended-command-history consult--buffer-history buffer-name-history yes-or-no-p-history))
 (setq minibuffer-history '("sweeprolog-export-predicate"))
-(setq file-name-history '("/nt/base.pl" "/nt/init.el" "/nt"))
+(setq file-name-history '("/nt/init.el" "/nt/" "/nt/history" "/nt/base.pl" "/nt/init.el" "/nt"))
 (setq extended-command-history '("find-function"))
-(setq consult--buffer-history '("*vterm nt*øˆ€€‚" "base.pløˆ€€‚" "*vterm nt*øˆ€€‚" "base.pløˆ€€‚" "*vterm nt*øˆ€€‚" "init.eløˆ€€‚" "*copilot events*øˆ€€‚" "init.eløˆ€€‚" "ntøˆ€€‚"))
-(setq buffer-name-history '("*vterm nt*" "base.pl" "*vterm nt*" "base.pl" "*vterm nt*" "init.el" "*copilot events*" "init.el" "nt" "fedi.pl" "eink.pl"))
+(setq consult--buffer-history '("init.eløˆ€€‚" "base.pløˆ€€‚" "*vterm nt*øˆ€€‚" "base.pløˆ€€‚" "*vterm nt*øˆ€€‚" "base.pløˆ€€‚" "*vterm nt*øˆ€€‚" "base.pløˆ€€‚" "*vterm nt*øˆ€€‚" "base.pløˆ€€‚" "*vterm nt*øˆ€€‚" "init.eløˆ€€‚" "*copilot events*øˆ€€‚" "init.eløˆ€€‚" "ntøˆ€€‚"))
+(setq buffer-name-history '("init.el" "history" "base.pl" "*vterm nt*" "base.pl" "*vterm nt*" "base.pl" "*vterm nt*" "base.pl" "*vterm nt*" "base.pl" "*vterm nt*" "init.el" "*copilot events*" "init.el" "nt" "fedi.pl" "eink.pl"))
 (setq yes-or-no-p-history '("yes"))

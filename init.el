@@ -261,6 +261,7 @@
   
   (require 'savehist)
   (savehist-mode)
+  (setq savehist-file (concat user-emacs-directory ".emacs-history"))
 
   (require 'marginalia)
   (marginalia-mode)
