@@ -1,5 +1,3 @@
-% -*- prolog -*-
-%
 % This file is part of the Node.Town system.
 % It is licensed under the GNU AGPL v3.0.
 % See the COPYING file for more information.
@@ -31,9 +29,9 @@
 :- rdf_register_prefix(id, 'https://id.node.town/').
 :- rdf_register_prefix(as, 'http://www.w3.org/ns/activitystreams#').
 :- rdf_register_prefix(schema, 'https://schema.org/').
+:- rdf_register_prefix(vcard, 'http://www.w3.org/2006/vcard/ns#').
 :- rdf_register_prefix(eth, 'http://ethon.consensys.net/').
 :- rdf_register_prefix(erc20, 'http://erc20.consensys.net/ERC20/').
-:- rdf_register_prefix(vcard, 'http://www.w3.org/2006/vcard/ns#').
 
 info(X) :- print_message(informational, X).
 oops(X) :- print_message(error, X).

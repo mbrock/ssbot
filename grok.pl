@@ -709,8 +709,8 @@ nuke(Type) :-
     rdf(S, rdf:type, Type),
     sing(subject(S)),
     deny(S, _, _),
-    deny(_, _, S),
-    deny(_, S, _).
+    deny(_, S, _),
+    deny(_, _, S).
 
 % OK, now we'll get these lists of triples containing free variables.
 % Subjects and objects can be free variables.
