@@ -1,5 +1,7 @@
 :- module(base,
-          [ know/3,
+          [ op(920, fy, (*)),
+            op(921, fy, (>-)),
+            know/3,
             info/1,
             moan/1,
             deny/3,
@@ -24,8 +26,8 @@
             moan/1,
             shew/4,
             triples_descriptions/2,
-            op(920, fy, *),
-            op(921, fy, >-)
+            solution_count/2,
+            graph_size/2
           ]).
 
 :- use_module(json_fix).
@@ -329,3 +331,12 @@ show(S) :-
     subject_triples(S, Triples),
     triples_descriptions(Triples, [S-POs]),
     info(shew(S, POs)).
+
+:- meta_predicate solution_count(0, -).
+
+solution_count(Goal, Count) :-
+    aggregate_all(count, Goal, Count).
+
+graph_size(Graph, Size) :-
+    solution_count(rdf(_, _, _, Graph), Size).
+

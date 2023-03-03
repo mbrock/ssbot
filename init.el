@@ -134,6 +134,7 @@
   (global-set-key (kbd "M-/") 'hippie-expand)
   (global-set-key (kbd "M-h") 'backward-kill-word)
   (global-set-key (kbd "RET") 'newline)
+  (global-set-key (kbd "C-c t") 'projectile-run-vterm)
   )
 
 (global-company-mode)
@@ -205,14 +206,13 @@
   (define-key copilot-completion-map (kbd "C-c C-p") 'copilot-previous-completion))
   
 
-;(require 'sweeprolog)
+(require 'sweeprolog)
+(add-to-list 'auto-mode-alist '("\\.pl$" . sweeprolog-mode))
 
 (load-file "vendor/prolog.el")
-(add-to-list 'auto-mode-alist '("\\.pl$" . prolog-mode))
 (setq prolog-system 'swi)
 (setq ediprolog-system 'swi)
 (define-key prolog-mode-map (kbd "C-c C-c") 'ediprolog-dwim)
-(define-key sweeprolog-mode-map (kbd "C-c C-c") 'ediprolog-dwim)
 
 (load-file "./vendor/ttl-mode/ttl-mode.el")
 (add-to-list 'auto-mode-alist '("\\.ttl\\'" . ttl-mode))
