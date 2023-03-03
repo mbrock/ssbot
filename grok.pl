@@ -34,6 +34,11 @@
 :- persistent known_event(data:any, time:float).
 :- db_attach("events.db", []).
 
+:- op(921, fy, >-).
+>- X --> [X].
+
+:- rdf_meta >-(t, ?, ?).
+
 self(nt:me).
 
 past(X, T) :- known_event(X, T).

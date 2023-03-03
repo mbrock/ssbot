@@ -1,43 +1,36 @@
 { pkgs, config, ... }:
 
 let
-  elixir-version = pkgs.elixir_1_14;
   devtools = import ./devtools.nix { inherit pkgs; };
   devcontainer-config = devtools.devcontainer-config {
-    vscode-extensions = [
-      "GitHub.copilot"
-      "JakeBecker.elixir-ls"
-      "phoenixfoundation.phoenix"
-      "mkhl.direnv"
-    ];
+    vscode-extensions = ["GitHub.copilot" "mkhl.direnv"];
   };
 
   my-emacs =
     pkgs.emacsWithPackages (e: with e; [
+      avy
       company
+      consult
+      embark
+      embark-consult
+      marginalia
+      orderless
+      vertico
+      
       default-text-scale
       direnv
-      eglot
-      elixir-mode
       flycheck
       magit
-      marginalia
       nix-mode
-      orderless
       paredit
       projectile
       projectile-ripgrep
       rainbow-delimiters
-      typescript-mode
-      vertico
       vterm
       whitespace-cleanup-mode
       zenburn-theme
-      zig-mode
 
-#      prolog-mode
-#      ediprolog
-
+      ediprolog
       sweeprolog
 
       # required for copilot.el
@@ -46,14 +39,14 @@ let
 
   my-swi-prolog =
     (pkgs.swiProlog.override { withGui = true; }).overrideAttrs (old:
-      let version = "9.1.4";
+      let version = "9.1.7";
       in {
         inherit version;
         src = pkgs.fetchFromGitHub {
           owner = "SWI-Prolog";
           repo = "swipl-devel";
           rev = "V${version}";
-          sha256 = "0qd4y1z6davrsyh6f21ldxcanijjc847qphqb2d65hfwdbdxpzxb";
+          sha256 = "sha256-SwjwDxVNyu8kpbTleiRbsh1/JvrWiRjPhDwnpRmh4GY=";
           fetchSubmodules = true;
         };
 
@@ -86,7 +79,7 @@ in {
     jq
     ripgrep
     screen
-    sqlite
+#    sqlite
 
     esbuild
 
@@ -105,7 +98,7 @@ in {
 #    ffmpeg
 #    youtube-dl
 
-#    scryer-prolog
+    # scryer-prolog
 
 #    elixir-version
 #    (elixir_ls.override { elixir = elixir-version; })
@@ -135,8 +128,7 @@ in {
     '';
 
     nodetown.exec = ''
-      iex --name nodetown@$(hostname) --cookie nodetown \
-        -S mix phx.server
+      swipl 
     '';
 
     gensym.exec = ''
@@ -187,8 +179,8 @@ in {
 
     export VAULT_ADDR=http://hamlet:8200/
 
-    jq < ${devcontainer-config} \
-       > ${config.env.DEVENV_ROOT}/.devcontainer.json
+#    jq < ${devcontainer-config} \
+#       > ${config.env.DEVENV_ROOT}/.devcontainer.json
 
     ${if pkgs.stdenv.isDarwin
       then ""

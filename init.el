@@ -56,7 +56,9 @@
 
 ;; Builtin global modes.
 (progn
-  (global-auto-revert-mode))
+  (global-auto-revert-mode)
+  (global-whitespace-cleanup-mode)
+  (global-hl-line-mode))
 
 (defmacro save-column (&rest body)
   `(let ((column (current-column)))
@@ -134,24 +136,7 @@
   (global-set-key (kbd "RET") 'newline)
   )
 
-(vertico-mode)
 (global-company-mode)
-
-;(savehist-mode)
-(require 'orderless)
-(setq completion-styles '(orderless basic)
-        completion-category-defaults nil
-        completion-category-overrides '((file (styles partial-completion))))
-
-(marginalia-mode)
-
-(require 'eglot)
-(add-to-list 'eglot-server-programs '(elixir-mode "elixir-ls"))
-
-(add-hook 'elixir-mode-hook
-          (lambda ()
-            (eglot-ensure)
-            (add-hook 'before-save-hook 'eglot-format nil t)))
 
 (add-hook 'emacs-lisp-mode-hook #'enable-paredit-mode)
 
@@ -163,13 +148,14 @@
  '(custom-safe-themes
    '("23621fdae219f1d49f831789073af07fbcd7ea67223688aacfdc91acaf394fa3" "1ecd6ec06003d01d836627631850716b12949f85d86428f916c58a2ba8937d13" "e7bae1e5baa33d1d36a90a2ce11e446e4fe57d0949d3c3597d7b46dd80e03830" default))
  '(package-selected-packages
-   '(yaml-mode zig-mode zenburn-theme whitespace-cleanup-mode vterm vertico typescript-mode sweeprolog s rainbow-delimiters projectile-ripgrep paredit orderless nix-mode marginalia magit flycheck elixir-mode eglot editorconfig direnv default-text-scale company)))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+   '(yaml-mode zig-mode zenburn-theme whitespace-cleanup-mode vterm vertico typescript-mode sweeprolog s rainbow-delimiters projectile-ripgrep paredit orderless nix-mode marginalia magit flycheck elixir-mode eglot editorconfig direnv default-text-scale company))
+ '(prolog-char-quote-workaround t)
+ '(prolog-electric-colon-flag nil)
+ '(prolog-electric-dash-flag nil)
+ '(prolog-electric-dot-flag nil)
+ '(prolog-electric-if-then-else-flag nil)
+ '(prolog-electric-tab-flag nil)
+ '(prolog-electric-underscore-flag t))
 
 (defun my-zoom-in ()
   (interactive)
@@ -206,19 +192,83 @@
   (add-hook 'prog-mode-hook 'copilot-mode)
 
   (global-set-key (kbd "C-c C-SPC") 'copilot-complete)
+  (setq copilot-idle-delay 0)
   
   (with-eval-after-load 'company
     ;; disable inline previews
     (delq 'company-preview-if-just-one-frontend company-frontends))
   
-  (define-key copilot-completion-map (kbd "C-c TAB") 'copilot-accept-completion))
+  (define-key copilot-completion-map (kbd "C-c TAB") 'copilot-accept-completion)
+  ;; C-c C-n to get the next completion
+  ;; C-c C-p to get the previous completion
+  (define-key copilot-completion-map (kbd "C-c C-n") 'copilot-next-completion)
+  (define-key copilot-completion-map (kbd "C-c C-p") 'copilot-previous-completion))
+  
 
-;; Use C-c C-c to DWIM in ediprolog
-;(define-key prolog-mode-map (kbd "C-c C-c") 'ediprolog-dwim)
+;(require 'sweeprolog)
 
-(require 'sweeprolog)
-
-(add-to-list 'auto-mode-alist '("\\.pl\\'" . sweeprolog-mode))
+(load-file "vendor/prolog.el")
+(add-to-list 'auto-mode-alist '("\\.pl$" . prolog-mode))
+(setq prolog-system 'swi)
+(setq ediprolog-system 'swi)
+(define-key prolog-mode-map (kbd "C-c C-c") 'ediprolog-dwim)
+(define-key sweeprolog-mode-map (kbd "C-c C-c") 'ediprolog-dwim)
 
 (load-file "./vendor/ttl-mode/ttl-mode.el")
 (add-to-list 'auto-mode-alist '("\\.ttl\\'" . ttl-mode))
+
+(setq ttl-electric-punctuation nil
+      ttl-indent-level 2)
+
+
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
+
+;; set up vertico, consult, marginalia, orderless
+(progn
+  (require 'vertico)
+  (vertico-mode)
+
+  (setq vertico-cycle t
+        vertico-count 20)
+  
+  (setq minibuffer-prompt-properties
+        '(read-only t cursor-intangible t face minibuffer-prompt))
+
+  (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+
+  ;; vertico-directory
+  (require 'vertico-directory)
+  (define-key vertico-map (kbd "RET") #'vertico-directory-enter)
+  (define-key vertico-map (kbd "DEL") #'vertico-directory-delete-char)
+  (define-key vertico-map (kbd "M-DEL") #'vertico-directory-delete-word)
+  (define-key vertico-map (kbd "M-d") #'vertico-directory-delete-word)
+  
+  ;; consult
+  (require 'consult)
+  (setq consult-project-root-function #'projectile-project-root)
+
+  (global-set-key (kbd "C-x b") #'consult-buffer)
+  (global-set-key (kbd "C-x 4 b") #'consult-buffer-other-window)
+  (global-set-key (kbd "C-x 5 b") #'consult-buffer-other-frame)
+  (global-set-key (kbd "C-x r b") #'consult-bookmark)
+  (global-set-key (kbd "C-c h") #'consult-history)
+  (global-set-key (kbd "M-y") #'consult-yank-pop)
+  
+  (require 'savehist)
+  (savehist-mode)
+
+  (require 'marginalia)
+  (marginalia-mode)
+
+  (require 'orderless)
+  (setq completion-styles '(orderless basic)
+        completion-category-defaults nil
+        completion-category-overrides
+        '((file (styles partial-completion)))))
+
+
