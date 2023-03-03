@@ -273,3 +273,5 @@
         '((file (styles partial-completion)))))
 
 
+;; make dired show file sizes in human readable format
+(setq dired-listing-switches "-alh")

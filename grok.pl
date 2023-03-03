@@ -19,7 +19,8 @@
            sing/1,
            nuke/1,
            finance/3,
-           show/1
+           show/1,
+           search_result/2
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -94,6 +95,10 @@ search(Query, Answers) :-
                 answer(Text, Answer)
             ),
             Answers).
+
+search_result(Query, Result) :-
+    qdrant:search(Query, 30, Results),
+    member(Result, Results.result).
 
 answer(Text, Answer) :-
     book_answer(Text, Answer), !.
