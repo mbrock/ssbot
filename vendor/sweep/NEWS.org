@@ -1,0 +1,868 @@
+#+title:                 sweep NEWS -- history of user-visible changes
+#+author:                Eshel Yaron
+#+email:                 me@eshelyaron.com
+#+language:              en
+#+options:               ':t toc:nil num:nil ^:{}
+#+startup:               showall
+
+This file contains the release notes for Sweep, an embedding of
+SWI-Prolog in Emacs.
+
+For further details, please consult the manual:
+[[https://eshelyaron.com/sweep.html][https://eshelyaron.com/sweep.html]].
+
+* Version 0.17.0 on 2023-02-16
+
+** New user option ~sweeprolog-dependency-directive~
+
+This user option determines the preferred Prolog directive to use in
+~sweeprolog-update-dependencies~ for adding new explicit dependencies in
+the buffer.  See the documentation for possible values.
+
+** Modified formatting of added dependency directives
+
+The format ~sweeprolog-update-dependencies~ uses for new dependency is
+modified to be more concise and similar to the format used by the
+corresponding command of the SWI-Prolog built-in editor.
+
+** Mode line indication for loaded buffers
+
+Buffers in ~sweeprolog-mode~ now display an indication in the mode line
+if they are loaded into the current SWI-Prolog runtime.
+
+** New commands for managing breakpoints
+
+This version includes new commands for setting and removing
+breakpoints ~sweeprolog-mode~ buffers.  See the new "Setting
+Breakpoints" manual section for more information.
+
+** Minor bug fix in ~sweeprolog-beginning-of-top-term~
+
+This version includes a fix for how the function
+~sweeprolog-beginning-of-top-term~ handles head terms with quoted
+functors (as in ~'foo'(Bar) :- ...~).  This function is used for finding
+the beginning of Prolog clauses, and this issue affected some commands
+that need to analyze the clause at point.
+
+* Version 0.16.0 on 2023-02-11
+
+** New user option ~sweeprolog-rename-variable-allow-existing~
+
+This user option controls what happens when you try to rename a
+variable with ~C-c C-r~ (~sweeprolog-rename-variable~) to the name of
+another existing variable.  By default this is set to ~confirm~, which
+causes ~sweeprolog-rename-variable~ to notify and ask you for
+confirmation is such cases.
+
+** New commands for managing numbered variables
+
+This version include two new commands for managing numbers in Prolog
+variable names, ~sweeprolog-increment-numbered-variables~ and
+~sweeprolog-decrement-numbered-variables~, bound to ~C-c C-+~ and ~C-c C--~
+respectively.  See the new "Numbered Variables" manual section for
+more information.
+
+** Integration with Info lookup commands
+
+You can use the standard ~C-h K~ and ~C-h F~ commands to find the Info
+manual node documenting a given Sweep command.
+
+** Bug fix in end-of-clause detection with ~Dict.key~ terms
+
+* Version 0.15.0 on 2023-02-01
+
+** New command ~sweeprolog-rename-variable~
+
+This command, bound to ~C-c C-r~ in ~sweeprolog-mode~ buffers,
+interactively renames a variable in the current clause.  You can now
+also rename variables by right-clicking on them and selecting ~Rename
+Variable~ with Context Menu mode enabled.
+
+** Jumping to predicate references now goes to the exact call position
+
+The cross reference information that Sweep provides is enhanced to
+include exact buffer positions for predicate references.  In prior
+versions, jumping to predicate references with ~M-?~
+(~xref-find-references~) would go to the beginning of the clause which
+invokes the given predicate, now it goes to the exact location of the
+invocation.
+
+* Version 0.14.1 on 2023-01-28
+
+** New command ~sweeprolog-count-holes~
+
+This command displays the number of holes in the current
+~sweeprolog-mode~ buffer.
+
+** New numeric argument to ~sweeprolog-forward-hole~
+
+You can now call ~sweeprolog-forward-hole~ with a numeric prefix
+argument (e.g. ~C-3 C-c TAB~) to move forward over that many holes. As a
+special case, if you call it with a zero numeric argument (e.g. by
+typing ~C-0 C-c TAB~), it invokes ~sweeprolog-count-holes~ instead.
+
+This change applies to ~sweeprolog-backward-predicate~ as well.
+
+** Predicate completion now consults the manual for argument names
+
+Completing predicate calls to built-in predicates with ~C-M-i~
+(~completion-at-point~) now uses the argument names from the
+documentation of the predicate in the SWI-Prolog manual to name the
+holes it inserts as placeholder arguments.
+
+* Version 0.14.0 on 2023-01-23
+
+** New command ~sweeprolog-async-goal~
+
+Sweep can now run goals in separate threads while redirecting their
+output to Emacs buffers.  To run goals and display their output
+asynchronously, use the new command ~M-x sweeprolog-async-goal~ (bound
+to ~C-c C-&~ in ~sweeprolog-mode~).  Sweep uses a dedicated mode called
+~sweeprolog-async-goal-output-mode~ which derives from ~compilation-mode~
+for the goal's output.
+
+** The command ~sweeprolog-xref-project-source-files~ now reports its progress
+
+** Fixed issue where signaling new Top-levels could fail
+
+This version fixes an issue where signaling newly created Prolog
+Top-level threads with ~C-c C-c~ could fail due to a race condition.
+
+* Version 0.13.0 on 2023-01-20
+
+** Right-click context menu support
+
+Sweep now leverages the Context Menu minor mode built into Emacs 28+
+to provide right-click menus for Prolog code that give you access to
+different commands depending on what you click on.  You can enable
+Context Menu mode with ~M-x context-menu-mode~.
+
+** Jumping to predicate definition works also for autoloadable predicates
+
+Jumping to predicate definitions with ~M-.~ (~xref-find-definitions~) now
+works also for predicates defined in source files listed in the
+library index that weren't loaded or visited yet.
+
+** Fixed inaccuracy in jumping to predicate definitions in modified buffers
+
+In previous versions, jumping to the definition of a predicate defined
+in another buffer that has recently been modified could end up placing
+point in the wrong line of that buffer due to stale xref data.  This
+version fixes this issue, jumping to predicate definitions with ~M-.~
+now locates the current definition line also in face of recent
+modifications.
+
+* Version 0.12.0 on 2023-01-16
+
+** Add on-hover descriptions to tokens in Prolog code
+
+~sweeprolog-mode~ can now annotate tokens in Prolog code with textual
+descriptions that are displayed at the mouse tooltip when you hover
+over different tokens in the buffer.  This is done by using the
+~help-echo~ text property.  You can also display these descriptions in
+the echo area with ~C-h .~ (~display-local-help~).
+
+** New user option ~sweeprolog-enable-help-echo~
+
+This is a flag controlling whether ~sweeprolog-mode~ adds descriptions
+to tokens in Prolog code via the ~help-echo~ text property.  It is set
+to ~t~ by default.
+
+* Version 0.11.3 on 2023-01-15
+
+** Improve integration with the standard ~compilation-mode~
+
+In previous versions, following an error/warning message from a buffer
+that enables ~compilation-mode~ or one of its derivatives to a
+~sweeprolog-mode~ buffer would forcefully set the ~next-error-last-buffer~
+to the target ~sweeprolog-mode~ buffer.  That would cause further ~M-x
+next-error~ (~M-g n~) invocations to jump to the next Flymake error in
+that buffer, instead of going to the next error from the original
+~compilation-mode~ buffer.  This issue is fixed in this version.
+
+The manual is also extended to cover the usage of
+~compilation-shell-minor-mode~ in Sweep Top-level buffers.
+
+** New command ~sweeprolog-top-level-send-goal~
+
+This command can be called from anywhere to send a Prolog query to the
+Sweep Top-level and show the results.  In ~sweeprolog-mode~ buffers,
+it's bound to ~C-c C-q~.  It's also bound to ~q~ in ~sweeprolog-prefix-map~,
+so if you've got that bound to e.g. ~C-c p~ you can run a query with
+this command from anywhere with ~C-c p q~.
+
+** Various documentation improvements
+
+The Sweep manual is extended with more details and useful information,
+and several docstrings have been tweaked.
+
+* Version 0.11.2 on 2023-01-07
+
+** Term Search now uses terms at point for "future history"
+
+When reading a search term in the minibuffer, ~sweeprolog-term-search~
+now populates the "future history" with the terms at point starting
+from the most nested term.  This means that you can type ~M-n~ in the
+minibuffer to quickly fill in the term at point in order to search for
+similar terms.
+
+* Version 0.11.1 on 2023-01-06
+
+** Term Search improvements
+
+Invoking ~sweeprolog-term-search~ with a prefix argument (i.e. typing
+~C-u C-c C-s~) now prompts for an arbitrary Prolog goal that variables
+in the search term should satisfy.
+
+We also use a new function ~sweeprolog-read-term~ for reading the search
+term, which checks that the minibuffer contains a valid Prolog term
+before exiting.  If the term is invalid this function refuses to exit
+the minibuffer and moves point to the position of the syntax error in
+the given term.
+
+* Version 0.11.0 on 2023-01-05
+
+** New command ~sweeprolog-term-search~
+
+_Experimental_ new command, bound to ~C-c C-s~ in ~sweeprolog-mode~ buffers,
+prompts for a Prolog term and searches for terms subsumed by it in the
+current buffer.  All matching terms are temporarily highlighted and
+the cursor moves to the start of the next occurrence after point.
+
+** Fix bug where ~sweeprolog-forward-predicate~ got confused by dynamic predicates
+
+In previous versions, typing ~M-n~ (~sweeprolog-forward-predicate~) would
+sometimes go to the next dynamic predicate, jumping over regular
+predicates that come before it.
+
+* Version 0.10.1 on 2023-01-01
+
+** New user option ~sweeprolog-read-predicate-documentation-function~
+
+This user option control how ~C-c C-d~
+(~sweeprolog-document-predicate-at-point~) prompts for initial
+documentation information, namely argument modes, determinism
+specification and predicate summary.  It specifies a function that
+~sweeprolog-document-predicate-at-point~ calls to get this information.
+
+The default value of this option is a new function
+~sweeprolog-read-predicate-documentation-default-function~ that
+preserves the current behavior of prompting the user to insert the
+needed information via the minibuffer.  An alternative function that
+uses holes instead is also provided, it is called
+~sweeprolog-read-predicate-documentation-with-holes~.
+
+** Improved handling of unbalanced quotes in ~sweeprolog-mode~ buffers
+
+Previously, unbalanced quotes in a Prolog clause could cause Sweep to
+treat the entire rest of buffer as part of that clause, causing major
+slowdowns when inserting Prolog strings and quoted atoms in large
+buffers.  To overcome this issue, this version introduces a mechanism
+for restricting analysis in such cases to the clauses surrounding the
+cursor.
+
+* Version 0.10.0 on 2022-12-25
+
+** New command ~sweeprolog-insert-term-with-holes~
+
+This command, bound to ~C-c C-m~ (or ~C-c RET~) in ~sweeprolog-mode~
+buffers, inserts a Prolog term at point with a given functor and
+arity, using holes in place of the term's arguments.
+
+** Holes are now always highlighted as such, even in incomplete terms
+
+** Fix possible crash when resetting ~sweep~ with ~sweeprolog-restart~
+
+* Version 0.9.6 on 2022-12-17
+
+** Indentation in ~sweeprolog-mode~ now respects ~indent-tabs-mode~
+
+With non-nil ~indent-tabs-mode~, tabs are now used to indent lines in
+Prolog code buffers.
+
+** New command for inferring the indentation style of the current buffer
+
+The new command ~sweeprolog-infer-indent-style~ can be used to update
+the buffer-local values of ~sweeprolog-indent-offset~ and
+~indent-tabs-mode~ according to the buffer's existing indentation style.
+
+** Fixes
+
+- Fixed issue with ~sweeprolog-indent-or-forward-hole~, in previous
+  versions it would fail to indent empty lines.
+
+* Version 0.9.5 on 2022-12-10
+
+** ~sweeprolog-align-spaces~ now works also in comments
+
+You can now use ~sweeprolog-align-spaces~ (or ~cycle-spacing~ in Emacs
+28+) to get the "right" amount of whitespace around the cursor
+position inside comments.
+
+** Improved interaction with ~auto-fill-mode~
+
+~sweeprolog-mode~ now customizes some settings related to text filling
+to make ~auto-fill-mode~ work as expected with SWI-Prolog comments.
+
+** Fixes
+
+- In previous versions, using ~sweeprolog-predicate-location~ on a
+  loaded predicate would give precedence to the location from which a
+  predicate was loaded, even if its source file has since been
+  modified causing its location to differ.  This behavior is fixed in
+  the current version, which means that ~M-.~ and friends should always
+  find the up-to-date location of predicate definitions.
+- Fixed possible infinite loop in
+  ~sweeprolog-beginning-of-predicate-at-point~ near the beginning of the
+  buffer.  This issue could be seen by calling
+  ~sweeprolog-document-predicate-at-point~ (~C-c C-d~) with point in the
+  first clause of the buffer.
+
+* Version 0.9.4 on 2022-12-06
+
+** New minor mode for moving to holes with ~TAB~
+
+This version introduces a new minor mode
+~sweeprolog-forward-hole-on-tab-mode~, which binds ~TAB~ to a command that
+moves either indents the current line or moves to the next hole in the
+buffer, in a DWIM fashion.
+
+** Fixes and minor improvements
+
+- Automatic indentation is improved to accommodate for DCG RHS
+  contexts and SSU guards.
+- ~sweeprolog-identifier-at-point~ now qualifies head terms with
+  according to the current module (e.g. ~foo:bar/2~ is returned when
+  point is over ~bar(_, _)~ in module ~foo~).
+
+* Version 0.9.3 on 2022-11-27
+
+** Added repeat keymap for ~sweeprolog-forward-hole~ (Emacs 28+)
+
+This allows repeating the command after the first invocation with ~TAB~.
+
+** Predicate completion now names inserted holes based on the predicate's documentation
+
+Completing predicate invocations with ~C-M-i~ (~completion-at-point~) now
+infers specific names for the holes inserted as argument placeholders
+based on the predicate's ~PlDoc~ specification, when present.
+
+* Version 0.9.2 on 2022-11-26
+
+** New command ~sweeprolog-update-dependencies~
+
+Bound to ~C-c C-u~ in ~sweeprolog-mode~ buffers, this command analyzes the
+current buffer looking for calls to implicitly autoloaded predicates,
+and adds or updates ~autoload/2~ and ~use_module/2~ directives to make the
+dependencies on these predicates explicit.
+
+** New user option ~sweeprolog-note-implicit-autoloads~
+
+Boolean flag, when non-nil ~flymake~ also reports implicitly autoloaded
+predicates in ~sweeprolog-mode~ buffers.  Enabled by default.
+
+* Version 0.9.1 on 2022-11-25
+
+** Predicate completion adjusts candidates arity according to the context
+
+Completing predicate invocations with ~completion-at-point~ now takes
+into account the number of arguments that will be implicitly added to
+the created predicate call by the context, and adjusts the completion
+candidates appropriately.  This applies both to DCG non-terminal
+bodies (where two implicit arguments are normally added to all
+predicate invocations), and to meta-calls such as ~include(foo, L0, L)~
+where the sole argument of ~foo/1~ is implicitly passed by ~include/3~.
+
+** Variable highlighting now excludes anonymous variables
+
+Unlike other variables, occurrences of anonymous variables (~_~) are no
+longer highlighted when the cursor enters one, since being anonymous
+they are semantically unrelated to each other.
+
+* Version 0.9.0 on 2022-11-23
+
+** New command for creating =PlUnit= test blocks
+
+The new command ~sweeprolog-plunit-testset-skeleton~, accessible from
+the =Sweep= menu-bar entry, inserts a template for a block of unit tests
+at the location of the cursor.
+
+** Fixes
+
+- Fixed and added regression tests for an issue where
+  ~sweeprolog-beginning-of-next-top-term~ would get confused by
+  multi-line comments starting at the beginning of a line.
+
+* Version 0.8.13 on 2022-11-23
+
+This is a bug-fix release, solving an issue introduced in version
+0.8.12 where highlighting goals qualified with a variable module would
+throw an error.
+
+* Version 0.8.12 on 2022-11-22
+
+** ~sweeprolog-top-level-signal-current~ uses the classic top-level interrupt interface
+
+~sweeprolog-top-level-signal-default-goal~ is now set to call the new
+SWI-Prolog built-in predicate ~prolog_interrupt/0~.  This predicate
+invokes the classic SWI-Prolog top-level interrupt interface similarly
+to pressing ~C-c~ in a terminal-bound top-level.
+
+** New user option ~sweeprolog-highlight-holes~
+
+When non-nil (the default), holes in Prolog buffers are highlighted
+with a dedicated face to help visually distinguishing them from
+regular Prolog variables.
+
+** ~sweeprolog-forward-hole~ is now bound in ~sweeprolog-top-level~ buffers
+
+Previously this command was only bound in ~sweeprolog-mode~.  It is now
+bound to ~C-c C-i~ in both major modes.
+
+** Fixes
+
+*** Inserting a new clause for a module-qualified predicate now works as expected
+
+Using ~sweeprolog-insert-term-dwim~ to insert the next clause of a
+module-qualified predicate definition would previously not work
+correctly.  This use case is now works as expected.
+
+*** Fixed possible non-termination finding the next term, causing Emacs to hang
+
+This version fixes an issue where the function
+~sweeprolog-beginning-of-next-top-term~, used by in the ~flymake~
+integration of ~sweeprolog-mode~, could hang when called near the end of
+the buffer.
+
+* Version 0.8.11 on 2022-11-21
+
+** ~sweeprolog-new-predicate-location-function~ signature changed
+
+The function specified by ~sweeprolog-new-predicate-location-function~
+should now take three arguments, namely the functor, arity and neck of
+the new predicate, instead of taking only the predicate indicator as a
+sole argument.
+
+** ~sweeprolog-insert-term-dwim~ now supports defining undefined DCG non-terminals
+
+Defining a previously undefined predicate with
+~sweeprolog-insert-term-dwim~ now analyzes the context of the undefined
+predicate invocation to determine if it is expected to be a DCG
+non-terminal, in which case an appropriate non-terminal definition is
+inserted instead of a regular predicate.
+
+* Version 0.8.10 on 2022-11-21
+
+** ~sweeprolog-top-level-signal-current~ now calls ~trace/0~ by default
+
+Calling ~sweeprolog-top-level-signal-current~ (~C-c C-c~ in
+~sweeprolog-top-level~ buffers) now signals the top-level thread with
+the goal specified by the user option
+~sweeprolog-top-level-signal-default-goal~, instead of prompting for a
+goal.  By default this user option is set to ~"trace"~, causing the
+top-level thread to enter trace mode.  To have
+~sweeprolog-top-level-signal-current~ prompt for a different goal
+instead, call it with a prefix argument, i.e. ~C-u C-c C-c~.
+
+** Fixes
+
+- Fixed insertion of new clauses with ~sweeprolog-insert-term-dwim~ when
+  the predicate at point is a DCG non-terminal or a predicate defined
+  with SSU rules.  ~sweeprolog-insert-term-dwim~ now detects and inserts
+  the correct neck (~:-~, ~-->~ or ~=>~) based on the previous clauses.
+
+* Version 0.8.9 on 2022-11-19
+
+** Predicate completions now uses holes for arguments
+
+When completing a predicate with ~completion-at-point~ (~C-M-i~) and
+choosing a predicate that takes arguments, holes are inserted is place
+of each required argument.
+
+** Syntax errors are now less intrusive
+
+Syntax errors that occur due to incomplete terms are no longer
+immediately highlighted as such.
+
+** ~auto-insert~ now leaves point at start of module summary
+
+** Fixes
+
+- Fixed error in ~sweeprolog-export-predicate~ (~C-c C-e~) in presence of
+  exported predicates.  Reported by Jan Wielemaker.
+
+* Version 0.8.8 on 2022-11-16
+
+** Added electric layout minor mode
+
+This version includes a new minor mode ~sweeprolog-electric-layout-mode~
+that adjusts whitespace around point as you type to adhere to Prolog
+layout conventions.
+
+** The top-level server in now started on-demand
+
+The TCP server that accepts connections from top-level buffers is now
+only started on the first invocation of ~sweeprolog-top-level~, instead
+of being started already in ~sweeprolog-init~.
+
+** Fixed issue with syntax error highlighting at the end of the buffer
+
+Syntax error highlighting is now removed more reliably when the syntax
+error is resolved.
+
+* Version 0.8.7 on 2022-11-12
+
+** Revised predicate completion-at-point and added atom completion
+
+~sweep~'s completion at point now detects when predicate completion is
+appropriate based on the context of point.  If point is at a
+non-callable position, atom completion is provided instead.
+
+* Version 0.8.6 on 2022-11-11
+
+** New user option ~sweeprolog-new-predicate-location-function~
+
+This user option specifies a function to be called from
+~sweeprolog-insert-term-dwim~ when defining a new predicate to choose
+the location of the new predicate definition.  The default value of
+the option is a function ~sweeprolog-default-new-predicate-location~
+which preserves the current behavior of placing the new predicate
+right below the current predicate.  Other options include the new
+function ~sweeprolog-new-predicate-location-above-current~ which places
+the new predicate above the current one.
+
+** Fixes
+
+- Fixed issue where ~sweeprolog-describe-predicate~ would throw an error
+  when describing predicates that were cross referenced but not loaded.
+
+* Version 0.8.5 on 2022-11-10
+
+** New command ~sweeprolog-xref-project-source-files~
+
+This command updates ~sweep~'s cross reference data for all Prolog
+source files in the current project.  Bound to ~X~ in
+~sweeprolog-prefix-map~.
+
+** Minor bug fixes
+
+- Fixed issue where ~sweeprolog-predicate-location~ sometimes returned a
+  file importing the predicate in question, rather than actually
+  defining it.
+- Fixed issue where the ~kill-buffer-hook~ of top-level buffers would
+  throw an error when the corresponding top-level thread already died.
+
+* Version 0.8.4 on 2022-11-09
+
+** Various bug fixes
+
+- Fixed regression in variable highlighting where occurrences of the
+  highlighted variable in adjacent clauses might have been
+  highlighted.
+- Fixed regression and added a test for clearing the syntax error face
+  immediately when the error is fixed (e.g. a fullstop is inserted at
+  the end of a clause).
+
+* Version 0.8.3 on 2022-11-07
+
+** New commands that operate on entire predicate definitions
+
+~sweeprolog-mode~ now includes dedicated function for acting on
+predicate definitions that span multiple clauses.  The new commands
+are ~sweeprolog-forward-predicate~ and ~sweeprolog-backward-predicate~
+bound to ~M-n~ and ~M-p~ respectively, and ~sweeprolog-mark-predicate~ bound
+to ~M-h~.
+
+* Version 0.8.2 on 2022-11-07
+
+** Renamed ~sweeprolog-colourise-*~ to ~sweeprolog-analyze-*~
+
+The following user options and commands have been renamed to better
+convey their meaning:
+
+| Old symbol name                          | New symbol name                        |
+|------------------------------------------+----------------------------------------|
+| ~sweeprolog-colourise-buffer~              | ~sweeprolog-analyze-buffer~              |
+| ~sweeprolog-colourise-buffer-on-idle~      | ~sweeprolog-analyze-buffer-on-idle~      |
+| ~sweeprolog-colourise-buffer-max-size~     | ~sweeprolog-analyze-buffer-max-size~     |
+| ~sweeprolog-colourise-buffer-min-interval~ | ~sweeprolog-analyze-buffer-min-interval~ |
+
+* Version 0.8.1 on 2022-10-25
+
+** Added completion-at-point for variable names
+
+When point is preceded by a valid Prolog variable name, invoking
+~completion-at-point~ (with ~C-M-i~ or ~M-TAB~) now detects that it needs to
+complete a variable name and provides other variable names that occur
+in the same clause as completion candidates.
+
+* Version 0.8.0 on 2022-10-22
+
+** New command ~sweeprolog-insert-term-dwim~ in ~sweeprolog-mode~ buffers
+
+This version introduces a new mechanism for context-based term
+insertion which revolves around a new command
+~sweeprolog-insert-term-dwim~, bound to ~C-M-m~.  When invoked after a
+fullstop ending a predicate clause, this command inserts a new clause
+for the same predicate.  When called with point over a call to an
+undefined predicate, this command insert a definition for that
+predicate after the current predicate definition.
+
+** New command ~sweeprolog-forward-hole~ in ~sweeprolog-mode~ buffers
+
+This command, bound to ~C-c C-i~ in ~sweeprolog-mode-map~, moves the
+cursor and marks the next hole (placeholder variable) inserted by
+~sweeprolog-insert-term-dwim~ for the user to fill it.
+
+** References to Prolog library files are now linkified in help buffers
+
+The HTML rendering ~sweep~ performs to display Prolog documentation in
+~*Help*~ buffers now also recognizes reference to Prolog library files,
+such as ~library(list)~, in Prolog documentation.  Clicking on such
+reference opens the corresponding file from the local Prolog library.
+
+* Version 0.7.2 on 2022-10-20
+
+** ~sweep-module~ is now loaded on-demand
+
+Previously, loading =sweeprolog.el= with e.g. ~(require 'sweeprolog)~
+would cause Emacs to also load =sweep-module= immediately, unless the
+user option ~sweeprolog-init-on-load~ had been explicitly set by the
+user to nil.  This version implements lazy loading of =sweep-module=,
+which makes loading =sweeprolog.el= a lot faster and circumvents
+potential problems with byte-compiling Elisp files that depend on
+=sweeprolog.el= but do not have =sweep-module= available at compile time.
+
+** Newly deprecated user option ~sweeprolog-init-on-load~
+
+The embedded Prolog is now loaded and initiated lazily, regardless of
+the value of ~sweeprolog-init-on-load~, which is now obsolete.
+
+* Version 0.7.1 on 2022-10-19
+
+** Jumping to source works also for built-in predicates defined in C
+
+~sweep~ now knows how to find and jump to the definitions of native
+built-in SWI-Prolog predicates defined in C, under the condition that
+the user has the SWI-Prolog sources checked out locally.
+
+See ~C-h v sweeprolog-swipl-sources~ and the new section "Built-in
+Native Predicates" in the manual for more information about this
+feature.
+
+** Fixes and improvements to ~sweeprolog-describe-predicate~
+
+This version fixes some compatibility issues with Emacs versions prior
+to 29 in ~sweeprolog-describe-predicate~.  Reported by Jan Wielemaker.
+
+* Version 0.7.0 on 2022-10-17
+
+** New command ~sweeprolog-describe-predicate~
+
+Similarly to ~sweeprolog-describe-module~, this command renders the full
+=PlDoc= documentation of the specified Prolog predicate in a ~help-mode~
+buffer.
+
+** Prolog ~*Help*~ buffers are now cross-referenced
+
+References to Prolog predicates in the ~*Help*~ buffer produced by
+~sweeprolog-describe-module~ and ~sweeprolog-describe-predicate~ are now
+"buttonized" such that pressing ~RET~ on them shows the description of
+the referenced predicate.
+
+* Version 0.6.3 on 2022-10-16
+
+** New command ~sweeprolog-describe-module~
+
+Experimental.  Renders the full =PlDoc= documentation of the specified
+Prolog module in a ~help-mode~ buffer.
+
+** Bug fix affecting ~sweeprolog-document-predicate-at-point~
+
+This version includes a fix in ~sweeprolog-beginning-of-top-term~, which
+is used to locate the beginning of the current clause.  Previously
+this function could hang when invoked with point before the first term
+on the buffer.  This affected commands that depend of this function,
+such as ~M-x sweeprolog-document-predicate-at-point~.
+
+* Version 0.6.2 on 2022-10-15
+
+** New command ~sweeprolog-export-predicate~ in ~sweeprolog-mode~ buffers
+
+~sweeprolog-export-predicate~ is a new command available in
+~sweeprolog-mode~ buffers for adding the predicate defined at point to
+the current module's export list.  Bound to =C-c C-e= in
+~sweeprolog-mode-map~.
+
+** Added a Prolog flag indicating the Prolog is running under ~sweep~
+
+=sweeprolog.el= now creates a boolean Prolog flag ~sweep~ set to ~true~ when
+initiating Prolog, to allow users to customize their Prolog init file
+accordingly.
+
+* Version 0.6.0 on 2022-10-10
+
+** Added integration with Flymake
+
+=sweeprolog.el= can now leverage ~flymake~ to highlight and browse
+diagnostics in ~sweeprolog-mode~ buffers.
+
+** New user option ~sweeprolog-enable-flymake~
+
+Boolean flag, enabled by default. When customized to nil,
+~sweeprolog-mode~ integration with ~flymake~ is disabled.
+
+** New command ~sweeprolog-show-diagnostics~
+
+Wrapper around ~flymake-show-buffer-diagnostics~ for ~sweeprolog-mode~,
+bound to ~C-c C-`~.  With a prefix argument, calls
+~flymake-show-project-diagnostics~ instead.
+
+** Fixed bug in end of a clause detection in presence of ~=..~
+
+This version includes a fix in ~sweeprolog-end-of-top-term~, which is
+used to locate the end of the current clause.  Previously this
+function would get "confused" by occurrences of the ~=../2~ ("univ")
+operator in the clause's body.
+
+* Version 0.5.4 on 2022-10-09
+
+** The manual now has a short description attached to each section
+** Fixed issue with loading ~sweep-module~ from a directory with spaces in its name
+
+* Version 0.5.3 on 2022-10-08
+
+** New command ~sweeprolog-align-spaces~ in ~sweeprolog-mode~ buffers
+
+~sweeprolog-align-spaces~ is a new command available in ~sweeprolog-mode~
+buffers for updating the whitespace around point according to the
+SWI-Prolog convention used in if-then-else constructs where the next
+token begins four columns after the start of the previous token.
+
+** New user option ~sweeprolog-enable-cycle-spacing~
+
+In Emacs 29, when this user option is non-nil (the default),
+~sweeprolog-align-spaces~ is added to ~cycle-spacing-actions~ such that
+pressing ~M-SPC~ once invokes it by default.
+
+
+* Version 0.5.2 on 2022-10-07
+
+** Fixed bug in detecting the end of a clause with commented fullstops
+
+This version includes a fix in ~sweeprolog-end-of-top-term~, which is
+used to locate the end of the current clause.  Previously this
+function would get "confused" by in-clause comments that end with a
+fullstop (see the added test case in ~sweeprolog-test.el~ for an
+example).  Reported by Jan Wielemaker.
+
+* Version 0.5.0 on 2022-10-04
+
+** New special buffer for listing and working with multiple top-levels
+
+=sweep= is now able to create a special buffer that contains a table of
+all active top-levels, called the Top-level Menu buffer.  This buffer
+has its own special major mode, ~sweeprolog-top-level-menu-mode~, which
+provides convenient commands that operate on the listed top-levels.
+
+** New commands for interrupting running top-levels
+
+=sweep= now includes a new command ~M-x sweeprolog-top-level-signal~ which
+prompts for a =sweep= top-level buffer and a Prolog goal and signals the
+specified top-level to execute the given goal.  This can be used to
+interrupt long running queries.
+
+The ~sweeprolog-top-level-mode~ major mode provides a variant of the
+above command called ~sweeprolog-top-level-signal-current~ that operates
+on the top-level thread of the current buffer.  This command is also
+newly bound to ~C-c C-c~ in top-level buffers.
+
+** New command ~sweeprolog-document-predicate-at-point~ in ~sweeprolog-mode~ buffers
+
+~sweeprolog-document-predicate-at-point~ is a new command available in
+~sweeprolog-mode~ buffers for interactively inserting =PlDoc=
+documentation comments for the predicate defined at point.  Bound to
+=C-c C-d= in ~sweeprolog-mode-map~.
+
+** New manual sections "Contributing" and "Things to do"
+
+* Version 0.4.7 on 2022-10-01
+
+** Added integration with =eldoc=
+
+=sweeprolog.el= can now leverage =eldoc= to display short documentation
+for the Prolog predicate at point in =sweeprolog-mode= buffers.
+
+** New user option =sweeprolog-enable-eldoc=
+
+Boolean flag, enabled by default. When customized to nil,
+=sweeprolog-mode= integration with =eldoc= is disabled.
+
+* Version 0.4.6 on 2022-10-01
+
+** Added integration with =auto-insert=
+
+=sweeprolog.el= now extends =auto-insert-alist= with a Prolog module
+template associated with =sweeprolog-mode=.  The module template is
+inserted into empty =sweeprolog-buffers= when =auto-insert-mode= is
+enabled.
+
+* New commands in =sweep= version =0.4.0=
+** New command =sweeprolog-load-buffer=.
+
+Loads a =sweeprolog-mode= buffer.  If called from a =sweeprolog-mode= buffer, loads
+the current buffer by default.
+
+** New command =sweeprolog-find-file-at-point=.
+
+Follows file specifications in =sweeprolog-mode= buffers.
+
+
+* New keybindings in =sweeprolog-mode= buffers
+
+** =C-c C-l= is now bound to =sweeprolog-load-buffer=.
+
+** =C-c C-o= is now bound to =sweeprolog-find-file-at-point=.
+
+
+* New user options in =sweep= version =0.4.0=
+
+** New user option =sweeprolog-faces-style=
+
+This option controls the which style of faces will be used for
+highlighting in =sweeprolog-mode= buffers.  Possible options are =light=, =dark=
+and =default=.
+
+** New user option =sweeprolog-indent-offset=
+
+This option, set by default to 4, is an integer denoting the number of
+columns used as the indent increment in =sweeprolog-mode= buffers.
+
+** New user option =sweeprolog-colourise-buffer-on-idle=
+
+This option is a boolean flag that determines whether to enable
+automatic updating of semantic highlighting in =sweeprolog-mode= buffers.
+
+** New user option =sweeprolog-colourise-buffer-min-interval=
+
+This option determines the minimum number of idle seconds that =sweep=
+will wait before updating semantic highlighting in a =sweeprolog-mode=
+buffer.
+
+** New user option =sweeprolog-colourise-buffer-max-size=
+
+This option determines the maximum size of a =sweeprolog-mode= buffer for
+which =sweep= will periodically update semantic highlighting on idle.
+
+** New user option =sweeprolog-top-level-min-history-length=
+
+This option, set by default to 3, determines a minimum length for
+inputs inserted into =sweep= top-level history ring.  The default value,
+3, avoids one character top-level responses from clobbering the
+history ring.  This kind of inputs includes, for example, the =;=
+character typed to invoke backtracking.
+
+
+* New keybindings in =sweeprolog-prefix-map=
+
+** The =l= key is now bound to =sweeprolog-load-buffer=.
