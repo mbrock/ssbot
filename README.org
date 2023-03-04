@@ -11,5 +11,18 @@ Node.Town is not a software project but a software quest.  Its goals
 are uncertain, its methods are unproven, and its outcomes are unknown.
 
 We can describe its current manifestation, and chronicle its winding
-path, but we cannot predict its future, for it is a living thing, an
-impulse, a spirit, a daydream.
+path, but we cannot predict its future, for it is a living thing.
+
+Still, some dreams are worth writing down.  In lieu of a plan, here is
+a compendium of ideas, a collection of notes, a catalog of desires.
+
+
+* Nimble, Supple, Joyful Software
+
+We are tired of programs that are slow, rigid, and joyless.  We want
+software that is nimble, supple, and joyful.
+
+The quality we seek is not an effect presented to the user.  We see it
+as deceptive to call a program user-friendly when the experience of
+working on it is a secondary concern.  Why?  Because it upholds a rift
+between programmers and end-users.
