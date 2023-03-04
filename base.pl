@@ -1,3 +1,5 @@
+% * Module Declaration
+% ** Exports
 :- module(base,
           [ op(920, fy, (*)),
             op(921, fy, (>-)),
@@ -30,6 +32,8 @@
             graph_size/2
           ]).
 
+% ** Imports
+
 :- use_module(json_fix).
 
 :- use_module(library(semweb/rdf11)).
@@ -44,6 +48,8 @@
 :- use_module(library(semweb/rdf_zlib_plugin)).
 :- use_module(library(http/http_ssl_plugin)).
 :- use_module(library(sweet)).
+
+% * Code
 
 :- op(920, fy, *).
 * _.

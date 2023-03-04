@@ -222,6 +222,16 @@
 (setq ttl-electric-punctuation nil
       ttl-indent-level 2)
 
+;;(use-package outli
+;;  :load-path "vendor/outli"
+;;    :bind (:map outli-mode-map
+;;	      ("C-c C-p" . (lambda () (interactive) (outline-back-to-heading))))
+;;  :hook ((prog-mode text-mode) . outli-mode)) ; or whichever modes you prefer
+
+(load-file "vendor/outli/outli.el")
+(add-hook 'prog-mode-hook 'outli-mode)
+(add-hook 'text-mode-hook 'outli-mode)
+(define-key outli-mode-map (kbd "C-c C-p") 'outli-back-to-heading)
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
