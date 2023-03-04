@@ -206,8 +206,10 @@
   (define-key copilot-completion-map (kbd "C-c C-p") 'copilot-previous-completion))
   
 
-(require 'sweeprolog)
+(load-file (concat (getenv "SWI_SOURCE") "/packages/sweep/sweeprolog.el"))
 (add-to-list 'auto-mode-alist '("\\.pl$" . sweeprolog-mode))
+
+(setq sweeprolog-swipl-sources (getenv "SWI_SOURCE"))
 
 (load-file "vendor/prolog.el")
 (setq prolog-system 'swi)

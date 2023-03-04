@@ -2,9 +2,6 @@
 
 let
   devtools = import ./devtools.nix { inherit pkgs; };
-  devcontainer-config = devtools.devcontainer-config {
-    vscode-extensions = ["GitHub.copilot" "mkhl.direnv"];
-  };
 
   my-emacs =
     pkgs.emacsWithPackages (e: with e; [
@@ -31,46 +28,39 @@ let
       zenburn-theme
 
       ediprolog
-      sweeprolog
+      # sweeprolog
 
       # required for copilot.el
       dash s editorconfig
     ]);
 
+  swiProlog = {
+    version = "9.1.7";
+    src = pkgs.fetchFromGitHub {
+      owner = "SWI-Prolog";
+      repo = "swipl-devel";
+      rev = "V${swiProlog.version}";
+      sha256 = "sha256-SwjwDxVNyu8kpbTleiRbsh1/JvrWiRjPhDwnpRmh4GY=";
+      fetchSubmodules = true;
+    };
+  };
+
   my-swi-prolog =
-    (pkgs.swiProlog.override { withGui = true; }).overrideAttrs (old:
-      let version = "9.1.7";
-      in {
-        inherit version;
-        src = pkgs.fetchFromGitHub {
-          owner = "SWI-Prolog";
-          repo = "swipl-devel";
-          rev = "V${version}";
-          sha256 = "sha256-SwjwDxVNyu8kpbTleiRbsh1/JvrWiRjPhDwnpRmh4GY=";
-          fetchSubmodules = true;
-        };
+    (pkgs.swiProlog.override { withGui = true; }).overrideAttrs
+      (old: {
+        inherit (swiProlog) src version;
 
-        nativeBuildInputs = old.nativeBuildInputs ++ [
-          pkgs.ninja
-        ];
-
+        nativeBuildInputs = old.nativeBuildInputs ++ [pkgs.ninja];
         buildInputs = old.buildInputs ++ [pkgs.emacs pkgs.pcre2];
-      }
-    );
-
-  no-mac = pkg:
-    if pkgs.stdenv.isDarwin
-    then []
-    else [pkg];
+      });
 
 in {
-  # https://devenv.sh/packages/
-  packages = with pkgs; (
-    no-mac my-swi-prolog
-  ) ++ [
+  packages = [
+    my-swi-prolog
+    my-emacs
     devtools.restless-git
-    
-#    flyctl
+  ] ++ (with pkgs; [
+    esbuild
     fx
     git
     graphviz
@@ -78,90 +68,8 @@ in {
     jless
     jq
     ripgrep
-    screen
-#    sqlite
-
-    esbuild
-
-#    datasette
-#    litestream
-#    pandoc
-#    redis
-
-#    llvmPackages_11.openmp
-#    blas
-#    faiss
-
-#    lynx
-#    links2
-
-#    ffmpeg
-#    youtube-dl
-
-    # scryer-prolog
-
-#    elixir-version
-#    (elixir_ls.override { elixir = elixir-version; })
-
-    my-emacs
-
-#    (texlive.combine {
-#      inherit (texlive)
-#        scheme-basic
-#        ebgaramond
-#        etoolbox
-#        extsizes
-#        parskip
-#        geometry
-#        crop
-#        titlesec
-#        xkeyval
-#        fontaxes
-#        dvipng
-#      ;
-#    })
-  ];
-
-  scripts = {
-    nodetown-tailscale.exec = ''
-      sudo tailscale up --accept-routes
-    '';
-
-    nodetown.exec = ''
-      swipl 
-    '';
-
-    gensym.exec = ''
-      cat /dev/urandom | tr -dc 'a-z' | fold -w 8 | head -n 1
-    '';
-
-    nodetown-remote.exec = ''
-      set -x
-      iex --sname $(gensym) --cookie nodetown \
-        --remsh nodetown@$(hostname)
-    '';
-
-    nodetown-eval.exec = ''
-      iex --sname $(gensym) --cookie nodetown \
-        --remsh nodetown@$(hostname) --eval "$@"
-    '';
-
-    nodetown-setup.exec = ''
-      mix do local.rebar --force, local.hex --force
-      mix escript.install hex livebook
-    '';
-
-    nodetown-livebook.exec = ''
-      export LIVEBOOK_DEFAULT_RUNTIME=attached:nodetown@$(hostname):nodetown
-      export LIVEBOOK_PASSWORD=nodetown-$(hostname)
-      export LIVEBOOK_IP=0.0.0.0
-      livebook server
-    '';
-
-    nodetown-datasette.exec = ''
-      datasette --host 0.0.0.0 nodetown_dev.db
-    '';
-  };
+    tmux
+  ]);
 
   enterShell = ''
     export PATH="$HOME/.mix/escripts:$PATH"
@@ -179,28 +87,26 @@ in {
 
     export VAULT_ADDR=http://hamlet:8200/
 
-#    jq < ${devcontainer-config} \
-#       > ${config.env.DEVENV_ROOT}/.devcontainer.json
-
-    ${if pkgs.stdenv.isDarwin
-      then ""
-      else "export LD_PRELOAD=${my-swi-prolog}/lib/libswipl.so"}
+    export LD_PRELOAD=${my-swi-prolog}/lib/libswipl.so
+    export SWI_SOURCE=${swiProlog.src}
   '';
 
-  # https://devenv.sh/languages/
+  scripts = {
+    nodetown-tailscale.exec = ''
+      sudo tailscale up --accept-routes
+    '';
+
+    nodetown.exec = ''
+      swipl -g "consult(index), module(nt), site, dial"
+    '';
+  };
+
   languages = {
     c.enable = true;
-    erlang.enable = true;
     javascript.enable = true;
     typescript.enable = true;
     deno.enable = true;
   };
-
-  # https://devenv.sh/pre-commit-hooks/
-  # pre-commit.hooks.shellcheck.enable = true;
-
-  # https://devenv.sh/processes/
-  # processes.ping.exec = "ping example.com";
 
   processes.code-server.exec = ''
     ${pkgs.code-server}/bin/code-server --bind-addr 127.0.0.1:5000
