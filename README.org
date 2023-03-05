@@ -22,7 +22,87 @@ a compendium of ideas, a collection of notes, a catalog of desires.
 We are tired of programs that are slow, rigid, and joyless.  We want
 software that is nimble, supple, and joyful.
 
-The quality we seek is not an effect presented to the user.  We see it
-as deceptive to call a program user-friendly when the experience of
-working on it is a secondary concern.  Why?  Because it upholds a rift
-between programmers and end-users.
+The quality we seek is not an effect presented to the user.  We cannot
+call a program user-friendly if the experience of working on its code
+is a secondary concern.  Why?  Because it upholds a rift between
+programmers and end-users.
+
+
+* Nimble Knowledge Graphs
+
+We are tired of "databases."  Yes, SQLite is nimbler than PostgreSQL,
+but it is still a database.  We want data to feel like cards that you
+can shuffle and scatter and twirl between your fingers.
+
+RDF triples seem like a reasonable basis.  They are simple, flexible,
+and expressive.  Without getting into OWL reasoning and SPARQL
+queries, just having namespaced relations is nice.
+
+We don't want to rely on complex implementations.  Triples are simple.
+They're easy to store, easy to query, and easy to reason about.
+
+Especially with Prolog.  You barely need to do anything.
+
+
+* Prolog
+
+Now, SWI-Prolog's RDF library is nice, but I want something more
+nimble.  For example, I want to make anonymous subgraphs and query
+them.  And I want more "logical purity" because that's when Prolog
+really shines.  That means no global state.  The graph is an argument.
+
+As always, this makes testing easier.  It also means we can treat the
+graph as an unknown variable and ask questions like "for which graphs
+is this query non-empty?"  And it changes the way we think about
+data.  Instead of a monolithic database, we have diverse, independent
+graphs.  We can reason about them separately, and then combine them
+when we need to.
+
+Instead of seeing RDF as a framework that we depend on, we can see it
+as a simple standard that we can implement in any way we want.
+Then we are not beholden to any particular runtime or implementation.
+We can use the best tools for the job.
+
+Even just considering Prolog, we can remain portable between different
+implementations.  We can use SWI-Prolog, Scryer Prolog, Trealla
+Prolog, Tau Prolog, GNU Prolog, you name it.  They all have advantages
+and disadvantages.
+
+For example, Tau Prolog is written in JavaScript, so it can run in the
+browser with no need for WebAssembly.  That means its DOM integration
+is direct and seamless.  That's great for dynamic web apps.
+
+Trealla Prolog is written in portable C and has a small footprint.
+That's great for embedded systems.  It also targets WebAssembly.
+And it can run grammars on memory-mapped files or I/O streams
+without overhead.
+
+One way to use Trealla is as a WebAssembly module that runs within a
+web server as a sandboxed plugin, like with the Spin runtime, or
+inside Deno, or whatever.  This seems like a beautiful way to run a
+backend server.
+
+Scryer Prolog is more complex, but it's very promising.  It's intended
+to be like the GHC of Prolog.  It has a highly efficient string
+representation, excellent constraint solving, fast DCGs, indexing,
+and more.  It's written in Rust and also targets WebAssembly.
+
+Now, only SWI-Prolog comes with an RDF library.  Relying on that
+makes us less nimble.  Instead, let's work from the bottom up,
+starting with the simplest possible implementation of RDF triples
+in standard Prolog.
+
+
+* Faking It Till We Make It
+
+At this point in our quest, we barely even need to expand the prefixes
+of our RDF triples.  We can treat =schema:Person= as just a couple
+of atoms, or even a single atom.  We don't really need to think about
+ontologies or vocabularies.
+
+We don't need to load the Schema.org vocabulary.  But we might as
+well.  Parsing Turtle is easy.  It's just a few lines of code
+with DCGs.
+
+#+BEGIN_SRC prolog
+#+END_SRC

@@ -156,7 +156,8 @@
  '(prolog-electric-dot-flag nil)
  '(prolog-electric-if-then-else-flag nil)
  '(prolog-electric-tab-flag nil)
- '(prolog-electric-underscore-flag t))
+ '(prolog-electric-underscore-flag t)
+ '(prolog-indent-width 4))
 
 (defun my-zoom-in ()
   (interactive)
@@ -209,7 +210,7 @@
 (load-file (concat (getenv "SWI_SOURCE") "/packages/sweep/sweeprolog.el"))
 (add-to-list 'auto-mode-alist '("\\.pl$" . sweeprolog-mode))
 
-(setq sweeprolog-swipl-sources (getenv "SWI_SOURCE"))
+;(setq sweeprolog-swipl-sources (getenv "SWI_SOURCE"))
 
 (load-file "vendor/prolog.el")
 (setq prolog-system 'swi)
@@ -262,8 +263,8 @@
   
   ;; consult
   (require 'consult)
-  (setq consult-project-root-function #'projectile-project-root)
-
+  (setq consult-project-root-function #'project-root)
+  
   (global-set-key (kbd "C-x b") #'consult-buffer)
   (global-set-key (kbd "C-x 4 b") #'consult-buffer-other-window)
   (global-set-key (kbd "C-x 5 b") #'consult-buffer-other-frame)

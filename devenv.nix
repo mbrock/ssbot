@@ -69,6 +69,7 @@ in {
     jq
     ripgrep
     tmux
+    scryer-prolog
   ]);
 
   enterShell = ''
