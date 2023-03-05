@@ -1,4 +1,6 @@
-:- module(turtle_dcg, [turtle_clause/3]).
+:- module(turtle_dcg, [turtle_clause/3,
+                       turtle_doc/3
+                      ]).
 
 :- use_module(library(charsio), [char_type/2]).
 
@@ -7,27 +9,34 @@
 %% TODO: directives, prefixes, base, comments, etc.
 %% TODO: terminals, unicode escapes, etc.
 
-turtle_clause(G) -->
+turtle_doc([H|T]) -->
+    turtle_triples(H),
+    turtle_doc(T).
+
+turtle_doc([]) --> [].
+
+turtle_triples(G) -->
     turtle_subject(S),
     turtle_predicate_object_list(S, G),
     ".",
-    space.
+    spaces.
 
-space --> " ", space.
-space --> "\n", space.
-space --> [].
+spaces --> space, spaces.
+spaces --> [].
+space  --> " ".
+space  --> "\n".
 
 turtle_subject(S)   --> turtle_iri(S).
 turtle_object(O)    --> turtle_iri(O).
 
-turtle_predicate(rdf:type) --> "a", space.
+turtle_predicate(rdf:type) --> "a", spaces.
 turtle_predicate(P) --> turtle_iri(P).
 
 turtle_iri(Prefix:Local) -->
     turtle_prefix(Prefix),
     ":",
     turtle_local(Local),
-    space.
+    spaces.
 
 %% Here are a bunch of details about the terminals from the spec,
 %% which we don't implement yet.
@@ -50,17 +59,12 @@ turtle_iri(Prefix:Local) -->
 %%                        '(' | ')' | '*' | '+' | ',' | ';' | '=' | '/' |
 %%                        '?' | '#' | '@' | '%')
 
-turtle_prefix([]) --> [].
-turtle_prefix([C|Cs]) -->
-    [C],
-    { char_type(C, alpha) },
-    turtle_prefix(Cs).
+alpha(C) --> [C], { char_type(C, alpha) }.
 
-turtle_local([]) --> [].
-turtle_local([C|Cs]) -->
-    [C],
-    { char_type(C, alpha) },
-    turtle_local(Cs).
+turtle_prefix([C|Cs]) --> alpha(C), turtle_prefix(Cs).
+turtle_prefix([])     --> [].
+turtle_local([C|Cs])  --> alpha(C), turtle_local(Cs).
+turtle_local([])      --> [].
 
 turtle_predicate_object_list(S, G) -->
     turtle_predicate_object_list_head(S, G0),
@@ -75,7 +79,7 @@ turtle_predicate_object_list_tail(_, G, G) -->
 
 turtle_predicate_object_list_tail(S, G0, G) -->
     ";",
-    space,
+    spaces,
     turtle_predicate(P),
     turtle_object_list(S, P, G1),
     turtle_predicate_object_list_tail(S, G0+G1, G).
@@ -83,7 +87,7 @@ turtle_predicate_object_list_tail(S, G0, G) -->
 turtle_object_list(S, P, [S-P-O|Rest]) -->
     turtle_object(O),
     ",",
-    space,
+    spaces,
     turtle_object_list(S, P, Rest).
 
 turtle_object_list(S, P, [S-P-O]) -->
