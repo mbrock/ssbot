@@ -216,6 +216,7 @@
 (setq prolog-system 'swi)
 (setq ediprolog-system 'swi)
 (define-key prolog-mode-map (kbd "C-c C-c") 'ediprolog-dwim)
+(define-key sweeprolog-mode-map (kbd "C-c C-r") 'ediprolog-dwim)
 
 (load-file "./vendor/ttl-mode/ttl-mode.el")
 (add-to-list 'auto-mode-alist '("\\.ttl\\'" . ttl-mode))

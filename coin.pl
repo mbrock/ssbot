@@ -1,4 +1,9 @@
-:- module(coin, []).
+:- module(coin, [etherscan_query_page_result/3,
+                 etherscan_query_page_rows/3,
+                 etherscan_query_rows/2
+                ]).
+
+:- use_module(library(lists), [member/2]).
 
 :- use_module(apis).
 :- use_module(secrets).
@@ -15,21 +20,48 @@
 %    &sort=asc
 %    &apikey=YourApiKeyToken
 
+etherscan_page_size(100).
+
 etherscan_api_token -->
     {secret(etherscan, Token)},
     [apikey=Token].
 
-etherscan_params(erc20_transfers(Address)) -->
-    etherscan_api_token,
+etherscan_params(erc20_transfers(Address), Page) -->
+    etherscan_base_params(Page),
     [module=account],
     [action=tokentx],
-    [address=Address],
-    [page=1],
-    [offset=100],
+    [address=Address].
+
+etherscan_params(txlist(Address), Page) -->
+    etherscan_base_params(Page),
+    [module=account],
+    [action=txlist],
+    [address=Address].
+
+etherscan_base_params(Page) -->
+    etherscan_api_token,
+    {etherscan_page_size(PageSize)},
+    [page=Page],
+    [offset=PageSize],
     [startblock=0],
     [endblock=99999999],
     [sort=asc].
 
-etherscan(Query, Result) :-
-    phrase(etherscan_params(Query), Params),
+etherscan_query_page_result(Query, Page, Result) :-
+    phrase(etherscan_params(Query, Page), Params),
     api_get(etherscan, [api], Params, Result).
+
+etherscan_query_page_rows(Query, Page, Rows) :-
+    between(1, inf, Page),
+    etherscan_query_page_result(Query, Page, Result),
+    Rows = Result.result,
+    length(Rows, Len),
+    etherscan_page_size(PageSize),
+    (Len < PageSize -> ! ; true).
+
+etherscan_query_row(Query, Row) :-
+    etherscan_query_page_rows(Query, _Page, Rows),
+    member(Row, Rows).
+
+etherscan_query_rows(Query, Rows) :-
+    findall(Row, etherscan_query_row(Query, Row), Rows).

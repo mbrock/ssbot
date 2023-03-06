@@ -27,7 +27,9 @@
            etherscan_person_address/2,
            deny_ethereum_resources/1,
            person_date_log/3,
-           blabla/0
+           blabla/0,
+           ethtx/3,
+           save_eth_txs/1
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -678,15 +680,18 @@ weird_token_symbol_name("0xecf8f87f810ecf450940c9f60066b4a7a501d6a7", "WETH", "W
 % weird_token_symbol_name("0x6b175474e89094c44da98b954eedeac495271d0f", "DAI", "Dai Stablecoin").
 % weird_token_symbol_name("0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359", "SAI", "Sai Stablecoin").
 
-token_symbol_name(X, Symbol, Name) :-
+token_data(X, Symbol, Name, Decimals) :-
     X.tokenSymbol = "",
     !,
     Symbol = "WETH",
-    Name = "Wrapped Ether".
+    Name = "Wrapped Ether",
+    Decimals = 18.
 
-token_symbol_name(X, Symbol, Name) :-
+token_data(X, Symbol, Name, Decimals) :-
     X.tokenSymbol = Symbol,
-    X.tokenName = Name.
+    X.tokenName = Name,
+    X.tokenDecimal = DecimalsString,
+    number_string(Decimals, DecimalsString).
               
 erc20(X) -->
     -< [X, hash, Hash],
@@ -694,12 +699,10 @@ erc20(X) -->
     -< [X, from, SrcAddress],
     -< [X, to, DstAddress],
     -< [X, value, ValueString],
-    -< [X, tokenDecimal, DecimalString],
-    -< [X, contractAddress, ContractAddress],
+    % -< [X, contractAddress, ContractAddress],
 
-    { token_symbol_name(X, Symbol, Name) },
+    { token_data(X, Symbol, Name, Decimals) },
 
-    { number_string(Decimals, DecimalString) },
     { number_string(Value, ValueString) },
     { number_string(UnixTime, UnixTimeString) },
     
@@ -717,7 +720,6 @@ erc20(X) -->
     
     >- [Txn, rdf:type, eth:'Tx'],
     >- [Txn, eth:txTime, UnixTime^^xsd:dateTime],
-    >- [Txn, eth:to, ContractAddress],
     >- [Txn, rdfs:seeAlso, EtherscanURL^^xsd:anyURI],
     >- [Txn, eth:hasLogEntry, Log],
     
@@ -734,6 +736,37 @@ erc20(X) -->
     >- [Gem, erc20:name, Name^^xsd:string],
     >- [Gem, erc20:symbol, Symbol^^xsd:string],
 
+    ok.
+
+ethtx(X) -->
+    -< [X, hash, Hash],
+    -< [X, timeStamp, UnixTimeString],
+    -< [X, from, SrcAddress],
+    -< [X, to, DstAddress],
+    -< [X, value, ValueString],
+    -< [X, gasUsed, GasUsedString],
+    -< [X, gasPrice, GasPriceString],
+    -< [X, isError, "0"],
+    -< [X, functionName, FunctionName],
+        
+    { number_string(Value, ValueString) },
+    { number_string(UnixTime, UnixTimeString) },
+    { number_string(GasUsed, GasUsedString) },
+    { number_string(GasPrice, GasPriceString) },
+    
+    >- [Src, eth:address, SrcAddress^^xsd:string],
+    >- [Dst, eth:address, DstAddress^^xsd:string],
+
+    >- [Txn, eth:txHash, Hash^^xsd:string],
+    >- [Txn, rdf:type, eth:'Tx'],
+    >- [Txn, eth:txTime, UnixTime^^xsd:dateTime],
+    >- [Txn, eth:value, Value^^xsd:integer],
+    >- [Txn, eth:txGasUsed, GasUsed^^xsd:integer],
+    >- [Txn, eth:txGasPrice, GasPrice^^xsd:integer],
+    >- [Txn, eth:from, Src],
+    >- [Txn, eth:to, Dst],
+    >- [Txn, eth:signature, FunctionName^^xsd:string],
+    
     ok.
 
 :- rdf_meta nuke(o, r).
@@ -799,6 +832,11 @@ save(erc20(X)) :-
     phrase(erc20(X), Triples),
     fuse(triples(Triples)),
     rdf_transaction(save(triples(Triples)), save(erc20(X))).
+
+save(ethtx(X)) :-
+    phrase(ethtx(X), Triples),
+    fuse(triples(Triples)),
+    rdf_transaction(save(triples(Triples)), save(ethtx(X))).
 
 :- rdf_meta save(t).
 :- rdf_meta fuse(t).
@@ -1069,19 +1107,29 @@ token_symbol(Token, Symbol) :-
     rdf(Token, erc20:symbol, Symbol^^xsd:string).
 
 save_erc20_transfers(Address) :-
-    coin:etherscan(erc20_transfers(Address), Rows),
-    forall(member(Row, Rows.result),
+    forall(coin:etherscan_query_row(erc20_transfers(Address), Row),
            save(erc20(Row))).
 
-log_row(Log, log(Date, Symbol, Amount, Debit, Credit)) :-
+save_eth_txs(Address) :-
+    forall((coin:etherscan_query_row(txlist(Address), Row),
+            Row.isError = "0"),
+           save(ethtx(Row))).
+
+log_row(Log, log(Date, Symbol, Amount, Debit, Credit, Sig)) :-
     rdf(Txn, eth:hasLogEntry, Log),
-    rdf(Txn, eth:txTime, Date^^xsd:dateTime),
+    rdf(Txn, eth:txTime, date_time(Y,M,D,H,Min,S,_)^^xsd:dateTime),
+    date_time_stamp(date(Y,M,D,H,Min,S,0,-,-), Stamp),
+    format_time(atom(Date), "%Y-%m-%d %H:%M:%S", Stamp),
     rdf(Log, erc20:token, Token),
     token_symbol(Token, Symbol),
     rdf(Log, erc20:from, Debit),
     rdf(Log, erc20:to, Credit),
     rdf(Log, erc20:value, Wad^^xsd:integer),
     rdf(Token, erc20:decimals, Decimals^^xsd:integer),
+    (  rdf(Txn, eth:signature, Sig^^xsd:string)
+    -> true
+    ;  Sig = (-)
+    ),
     Amount is Wad / 10^Decimals.
 
 :- rdf_meta etherscan_person_address(r, ?).
@@ -1093,9 +1141,4 @@ etherscan_person_address(Person, Address) :-
 deny_ethereum_resources(T) :-
     coin_type(T),
     forall(nuke(T, _S), true).
-
-% blabla(Gem) :-
-%     rdf(Gem, eth:address, ),
-%     know(Gem, erc20:symbol, "WETH"),
-%     know(Gem, erc20:name, "Wrapped ETH").
 

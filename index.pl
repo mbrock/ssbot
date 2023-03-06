@@ -41,7 +41,7 @@
 :- use_module(library(md/md_parse), [md_parse_string/2]).
 
 :- http_handler(root(.), graph(transaction, html), []).
-:- http_handler(root(graph), graph(transaction, ttl), []).
+%:- http_handler(root(graph), graph(transaction, ttl), []).
 
 esbuild :-
   shell('cd web && npm run esbuild').
@@ -115,10 +115,10 @@ graph(html, Request) :-
               \graph_view(Context, Query),
               div([id(editor), autofocus], [])])).
 
-graph(ttl, _Request) :-
-    format('content-type: text/turtle~n~n'),
-    graph_url(G),
-    turtle(current_output, G).
+% graph(ttl, _Request) :-
+%     format('content-type: text/turtle~n~n'),
+%     graph_url(G),
+%     turtle(current_output, G).
 
 html_string(HTML, String) :-
     phrase(HTML, Tokens),

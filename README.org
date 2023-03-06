@@ -91,9 +91,6 @@ makes us less nimble.  Instead, let's work from the bottom up,
 starting with the simplest possible implementation of RDF triples
 in standard Prolog.
 
-
-* Faking It Till We Make It
-
 At this point in our quest, we barely even need to expand the prefixes
 of our RDF triples.  We can treat =schema:Person= as just a couple
 of atoms, or even a single atom.  We don't really need to think about
@@ -102,3 +99,28 @@ ontologies or vocabularies.
 We don't need to load the Schema.org vocabulary.  But we might as
 well.  Parsing Turtle is easy.  It's just a few lines of code
 with DCGs.
+
+
+* Late Night Pagination Party
+
+I'm working on downloading data from the Etherscan API, and I find
+myself needing to paginate through the results, wondering how to
+express this logic nicely in Prolog.  Let's think about it.
+
+The Etherscan API returns a JSON object with a =result= property
+that contains an array of transactions.  The array is paginated,
+so we need to make multiple requests to get all the transactions.
+
+The API also returns a =status= property that indicates whether
+the request was successful.  The value is either ="1"= (good) or
+="0"= (bad).
+
+Let's see what we get when we request a page of transactions
+beyond the end of the list...  OK, it returns a =status= of ="0"=,
+a =result= of =[]=, and a =message= of ="No transactions found"=.
+
+If the length of the =result= array is less than the page size,
+then we know we've reached the end of the list.
+
+To step through the pages in Prolog, we can use =between/3= to
+generate a sequence of page numbers.
