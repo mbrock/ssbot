@@ -218,11 +218,11 @@
 (define-key prolog-mode-map (kbd "C-c C-c") 'ediprolog-dwim)
 (define-key sweeprolog-mode-map (kbd "C-c C-r") 'ediprolog-dwim)
 
-(load-file "./vendor/ttl-mode/ttl-mode.el")
-(add-to-list 'auto-mode-alist '("\\.ttl\\'" . ttl-mode))
+;; (load-file "./vendor/ttl-mode/ttl-mode.el")
+;; (add-to-list 'auto-mode-alist '("\\.ttl\\'" . ttl-mode))
 
-(setq ttl-electric-punctuation nil
-      ttl-indent-level 2)
+;; (setq ttl-electric-punctuation nil
+;;       ttl-indent-level 2)
 
 ;;(use-package outli
 ;;  :load-path "vendor/outli"
