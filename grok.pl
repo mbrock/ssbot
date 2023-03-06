@@ -17,20 +17,29 @@
            item/3,
            erc20/3,
            sing/1,
-           nuke/1,
-           finance/3,
+           nuke/2,
            show/1,
-           search_result/2
+           search_result/2,
+           token_symbol/2,
+           save_erc20_transfers/1,
+           person_account/2,
+           log_row/2,
+           etherscan_person_address/2,
+           deny_ethereum_resources/1,
+           person_date_log/3,
+           blabla/0
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
 :- use_module(library(persistency)).
 :- use_module(library(http/json)).
 :- use_module(library(openapi), []).
+:- use_module(library(lists), [member/2]).
 :- use_module(qdrant, [embed/3]).
 :- use_module(openai, [completion/3, ask/2, edit/3]).
 :- use_module(base).
 :- use_module(apis).
+:- use_module(coin).
 
 :- persistent known_event(data:any, time:float).
 :- db_attach("events.db", []).
@@ -39,6 +48,9 @@
 >- X --> [X].
 
 :- rdf_meta >-(t, ?, ?).
+
+:- op(920, fy, *).
+* _.
 
 self(nt:me).
 
@@ -661,6 +673,20 @@ example_tx(_{ blockHash: "0xffe0df860e1a17f25d6e21c646bbcb70459ee1a2d2360f26dcd9
               tokenSymbol:"BOBx",
               transactionIndex:"83",
               value:"1500000000000000000000"}).
+
+weird_token_symbol_name("0xecf8f87f810ecf450940c9f60066b4a7a501d6a7", "WETH", "Wrapped Ether").
+% weird_token_symbol_name("0x6b175474e89094c44da98b954eedeac495271d0f", "DAI", "Dai Stablecoin").
+% weird_token_symbol_name("0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359", "SAI", "Sai Stablecoin").
+
+token_symbol_name(X, Symbol, Name) :-
+    X.tokenSymbol = "",
+    !,
+    Symbol = "WETH",
+    Name = "Wrapped Ether".
+
+token_symbol_name(X, Symbol, Name) :-
+    X.tokenSymbol = Symbol,
+    X.tokenName = Name.
               
 erc20(X) -->
     -< [X, hash, Hash],
@@ -668,49 +694,62 @@ erc20(X) -->
     -< [X, from, SrcAddress],
     -< [X, to, DstAddress],
     -< [X, value, ValueString],
-    -< [X, tokenSymbol, Symbol],
-    -< [X, tokenName, Name],
     -< [X, tokenDecimal, DecimalString],
-    -< [X, contractAddress, GemAddress],
+    -< [X, contractAddress, ContractAddress],
+
+    { token_symbol_name(X, Symbol, Name) },
 
     { number_string(Decimals, DecimalString) },
     { number_string(Value, ValueString) },
     { number_string(UnixTime, UnixTimeString) },
+    
     { format(string(EtherscanURL),
              "https://etherscan.io/tx/~w", [Hash]) },
     
     >- [Txn, eth:txHash, Hash^^xsd:string],
+    >- [Log, (eth:txHash)-(erc20:from), Txn-Src],
     >- [Src, eth:address, SrcAddress^^xsd:string],
     >- [Dst, eth:address, DstAddress^^xsd:string],
-    >- [Gem, eth:address, GemAddress^^xsd:string],
+    >- [Gem, erc20:symbol, Symbol^^xsd:string],
 
-    >- [Txn, rdf:type, erc20:'TokenTransfer'],
-    >- [Txn, rdf:type, eth:'Tx'],
-    >- [Gem, rdf:type, erc20:'ERC20Token'],
     >- [Src, rdf:type, eth:'Account'],
     >- [Dst, rdf:type, eth:'Account'],
     
+    >- [Txn, rdf:type, eth:'Tx'],
+    >- [Txn, eth:txTime, UnixTime^^xsd:dateTime],
+    >- [Txn, eth:to, ContractAddress],
+    >- [Txn, rdfs:seeAlso, EtherscanURL^^xsd:anyURI],
+    >- [Txn, eth:hasLogEntry, Log],
+    
+    >- [Log, rdf:type, erc20:'TokenTransfer'],
+    >- [Log, erc20:from, Src],
+    >- [Log, erc20:to, Dst],
+    >- [Log, erc20:token, Gem],
+    >- [Log, erc20:value, Value^^xsd:integer],
+    
+    payload(X, Log),
+    
+    >- [Gem, rdf:type, erc20:'ERC20Token'],
     >- [Gem, erc20:decimals, Decimals^^xsd:integer],
     >- [Gem, erc20:name, Name^^xsd:string],
     >- [Gem, erc20:symbol, Symbol^^xsd:string],
 
-    >- [Txn, eth:txTime, UnixTime^^xsd:dateTime],
-    >- [Txn, eth:from, Src],
-    >- [Txn, eth:to, Gem],
-    >- [Txn, erc20:from, Src],
-    >- [Txn, erc20:to, Dst],
-    >- [Txn, erc20:token, Gem],
-    >- [Txn, erc20:value, Value^^xsd:integer],
-    >- [Txn, rdfs:seeAlso, EtherscanURL^^xsd:anyURI],
-    
     ok.
 
-nuke(Type) :-
+:- rdf_meta nuke(o, r).
+
+nuke(Type, S) :-
     rdf(S, rdf:type, Type),
     sing(subject(S)),
     deny(S, _, _),
-    deny(_, S, _),
     deny(_, _, S).
+
+:- rdf_meta coin_type(r).
+
+coin_type(erc20:'ERC20Token').
+coin_type(eth:'Account').
+coin_type(eth:'Tx').
+coin_type(erc20:'TokenTransfer').
 
 % OK, now we'll get these lists of triples containing free variables.
 % Subjects and objects can be free variables.
@@ -722,22 +761,29 @@ fuse(triples(Triples)) :-
     maplist(fuse(1), Triples),
     maplist(fuse(2), Triples).
 
+fuse(1, [S, P1-P2, O1-O2]) :-
+    var(S),
+    ground(P1-P2),
+    ground(O1-O2),
+    !,
+    rdf(S, P1, O1),
+    rdf(S, P2, O2),
+    !.
+
 fuse(1, [S, P, O]) :-
     var(S),
-    ground(P),
+    atom(P),
     ground(O),
     rdf(P, nt:idScope, _),
     rdf(S, P, O),
-    !,
-    debug(grak, 'link ~w ~w ~w', [S, P, O]).
+    !.
 
 fuse(2, [S, P, O]) :-
     var(S),
     ground(P),
     ground(O),
     mint(url(S)),
-    !,
-    debug(grak, 'mint ~w ~w ~w', [S, P, O]).
+    !.
 
 fuse(_, [_S, _P, _O]).
 
@@ -747,8 +793,6 @@ save(triples(Triples)) :-
     maplist(save, Triples).
 
 save([S, P, O]) :-
-    debug(grak, 'save ~w ~w ~w', [S, P, O]),
-%    spew(S, P, O),
     know(S, P, O).
 
 save(erc20(X)) :-
@@ -969,16 +1013,89 @@ today(DateTime) :-
     get_time(Now),
     stamp_date_time(Now, DateTime, local).
 
-:- rdf_meta finance(r, ?, ?).
-finance(Person, Account, [Txn, Symbol, Amount]) :-
-    rdf(Person, eth:controlsAccount, Account),
-    ( rdf(Txn, erc20:from, Account)
-    ; rdf(Txn, erc20:to, Account)
+% Let's write a transaction report.
+%
+% For some token, and some account, we want a list of transactions
+% with running balance.
+%
+% This is a DCG that relates a list of sorted transactions to a list
+% of transactions with running balance.
+%
+% We use the "semicontext notation" for maintaining the balance
+% state.
+% We use contraints for integer arithmetic via library(clpfd).
+
+:- use_module(library(clpfd)).
+
+txn_sums([]), [_Sum] --> [].
+txn_sums([Wad | Rest]), [Sum] -->
+    { New #= Sum + Wad },
+    [New],
+    txn_sums(Rest).
+        
+% The CSV columns are:
+%
+% # Date, Symbol, Amount, Balance (one column per symbol), Debit, Credit
+%
+% We generate row sequences for each symbol, and then merge them
+% together.
+
+
+:- rdf_meta token_symbol(r, -),
+            person_account(r, r),
+            person_address(r, -),
+            account_date_log(r, -, t),
+            person_date_log(r, -, t),
+            account_address(r, -).
+
+account_address(Account, Address) :-
+    rdf(Account, eth:address, Address^^xsd:string).
+     
+account_date_log(Account, Date, Log) :-
+    (  rdf(Log, erc20:from, Account)
+    ;  rdf(Log, erc20:to, Account)
     ),
-    rdf(Txn, erc20:value, Cents^^xsd:integer),
-    rdf(Txn, erc20:token, Token),
-    rdf(Token, erc20:symbol, Symbol^^xsd:string),
+    rdf(Txn, eth:hasLogEntry, Log),
+    rdf(Txn, eth:txTime, Date^^xsd:dateTime).
+
+person_account(Person, Account) :-
+    rdf(Person, eth:controlsAccount, Account).
+
+person_date_log(Person, Date, Log) :-
+    person_account(Person, Account),
+    account_date_log(Account, Date, Log).
+
+token_symbol(Token, Symbol) :-
+    rdf(Token, erc20:symbol, Symbol^^xsd:string).
+
+save_erc20_transfers(Address) :-
+    coin:etherscan(erc20_transfers(Address), Rows),
+    forall(member(Row, Rows.result),
+           save(erc20(Row))).
+
+log_row(Log, log(Date, Symbol, Amount, Debit, Credit)) :-
+    rdf(Txn, eth:hasLogEntry, Log),
+    rdf(Txn, eth:txTime, Date^^xsd:dateTime),
+    rdf(Log, erc20:token, Token),
+    token_symbol(Token, Symbol),
+    rdf(Log, erc20:from, Debit),
+    rdf(Log, erc20:to, Credit),
+    rdf(Log, erc20:value, Wad^^xsd:integer),
     rdf(Token, erc20:decimals, Decimals^^xsd:integer),
-    Amount is Cents / (10 ** Decimals),
-    true.
+    Amount is Wad / 10^Decimals.
+
+:- rdf_meta etherscan_person_address(r, ?).
+etherscan_person_address(Person, Address) :-
+    person_account(Person, Account),
+    account_address(Account, Address),
+    save_erc20_transfers(Address).
+
+deny_ethereum_resources(T) :-
+    coin_type(T),
+    forall(nuke(T, _S), true).
+
+% blabla(Gem) :-
+%     rdf(Gem, eth:address, ),
+%     know(Gem, erc20:symbol, "WETH"),
+%     know(Gem, erc20:name, "Wrapped ETH").
 

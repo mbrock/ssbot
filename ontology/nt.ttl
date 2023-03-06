@@ -294,6 +294,7 @@ nt:ethereum a as:Service ;
 
 eth:address nt:idScope nt:ethereum .
 eth:txHash nt:idScope nt:ethereum .
+erc20:symbol nt:idScope nt:ethereum .
 
 nt:payload a owl:DatatypeProperty ;
     rdfs:label "payload" ;

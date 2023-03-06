@@ -126,7 +126,7 @@ sync(X) :-
        spew(r, r, o, +),
        spew(r, o),
        spew(r),
-       know(r, r, o),
+       know(r, t, t),
        know(r, r, o, +),
        deny(r, r, o),
        deny(r, r, o, +).
@@ -186,7 +186,13 @@ spew(P, O) :-
     spew(O),
     format(" ~n", []).
 
+know(S, P1-P2, O1-O2) :-
+    !,
+    know(S, P1, O1), 
+    know(S, P2, O2).
+
 know(S, P, O) :-
+    atom(P),
     graph_url(G),
     know(S, P, O, G).
 
@@ -230,7 +236,7 @@ shew(X) -->
 
 shew(X^^T) -->
     { atom(T),
-      rdf_global_id(P:L, T) },
+      rdf_global_id(_P:_L, T) },
     >- ansi([fg(green)], '~w', [X]),
     % >- ansi([fg(blue)], ' [~w:~w] ', [P, L]),
     ok.
