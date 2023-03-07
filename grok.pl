@@ -27,9 +27,14 @@
            etherscan_person_address/2,
            deny_ethereum_resources/1,
            person_date_log/3,
-           blabla/0,
            ethtx/3,
-           save_eth_txs/1
+           save_eth_txs/1,
+           log_good/1,
+           row_with_signed_amount/3,
+           row_with_links/2,
+           write_account_csv/2,
+           save_eth_internal_txs/1,
+           save_txs/1
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -709,6 +714,11 @@ erc20(X) -->
     { format(string(EtherscanURL),
              "https://etherscan.io/tx/~w", [Hash]) },
     
+    { format(atom(Log),
+             "https://etherscan.io/tx/~w#~w", [Hash, SrcAddress]) }, % XXX
+
+    { atom_string(Txn, EtherscanURL) },
+    
     >- [Txn, eth:txHash, Hash^^xsd:string],
     >- [Log, (eth:txHash)-(erc20:from), Txn-Src],
     >- [Src, eth:address, SrcAddress^^xsd:string],
@@ -754,6 +764,11 @@ ethtx(X) -->
     { number_string(GasUsed, GasUsedString) },
     { number_string(GasPrice, GasPriceString) },
     
+    { format(string(EtherscanURL),
+             "https://etherscan.io/tx/~w", [Hash]) },
+
+    { atom_string(Txn, EtherscanURL) },
+    
     >- [Src, eth:address, SrcAddress^^xsd:string],
     >- [Dst, eth:address, DstAddress^^xsd:string],
 
@@ -765,10 +780,35 @@ ethtx(X) -->
     >- [Txn, eth:txGasPrice, GasPrice^^xsd:integer],
     >- [Txn, eth:from, Src],
     >- [Txn, eth:to, Dst],
-    >- [Txn, eth:signature, FunctionName^^xsd:string],
-    
-    ok.
+    >- [Txn, eth:signature, FunctionName^^xsd:string].
 
+ethtx_internal(X) -->
+    -< [X, hash, TxHash],
+    -< [X, from, SrcAddress],
+    -< [X, to, DstAddress],
+    -< [X, value, ValueString],
+    -< [X, isError, "0"],
+    -< [X, traceId, TraceID],
+    
+    { number_string(Value, ValueString) },
+    
+    >- [Src, eth:address, SrcAddress^^xsd:string],
+    >- [Dst, eth:address, DstAddress^^xsd:string],
+    
+    { format(atom(Txn),
+             "https://etherscan.io/tx/~w", [TxHash]) },
+    { format(atom(Int),
+             "https://etherscan.io/tx/~w#~w", [TxHash, TraceID]) },
+
+    >- [Txn, eth:txHash, TxHash^^xsd:string],
+    >- [Int, (eth:txHash)-(eth:traceId), Txn-TraceID],
+    >- [Int, rdf:type, eth:'InternalTx'],
+    >- [Int, eth:value, Value^^xsd:integer],
+   
+    >- [Int, eth:from, Src],
+    >- [Int, eth:to, Dst].
+   
+    
 :- rdf_meta nuke(o, r).
 
 nuke(Type, S) :-
@@ -782,6 +822,7 @@ nuke(Type, S) :-
 coin_type(erc20:'ERC20Token').
 coin_type(eth:'Account').
 coin_type(eth:'Tx').
+coin_type(eth:'InternalTx').
 coin_type(erc20:'TokenTransfer').
 
 % OK, now we'll get these lists of triples containing free variables.
@@ -798,8 +839,8 @@ fuse(1, [S, P1-P2, O1-O2]) :-
     var(S),
     ground(P1-P2),
     ground(O1-O2),
-    !,
     rdf(S, P1, O1),
+    !,
     rdf(S, P2, O2),
     !.
 
@@ -837,6 +878,11 @@ save(ethtx(X)) :-
     phrase(ethtx(X), Triples),
     fuse(triples(Triples)),
     rdf_transaction(save(triples(Triples)), save(ethtx(X))).
+
+save(ethtx_internal(X)) :-
+    phrase(ethtx_internal(X), Triples),
+    fuse(triples(Triples)),
+    rdf_transaction(save(triples(Triples)), save(ethtx_internal(X))).
 
 :- rdf_meta save(t).
 :- rdf_meta fuse(t).
@@ -1089,12 +1135,33 @@ txn_sums([Wad | Rest]), [Sum] -->
 account_address(Account, Address) :-
     rdf(Account, eth:address, Address^^xsd:string).
      
+% A log can be an ERC20 transfer.
 account_date_log(Account, Date, Log) :-
     (  rdf(Log, erc20:from, Account)
     ;  rdf(Log, erc20:to, Account)
     ),
     rdf(Txn, eth:hasLogEntry, Log),
     rdf(Txn, eth:txTime, Date^^xsd:dateTime).
+
+% A log can be an ether transfer.
+account_date_log(Account, Date, Log) :-
+    (  rdf(Log, eth:from, Account)
+    ;  rdf(Log, eth:to, Account)
+    ),
+    rdf(Log, eth:value, Value^^xsd:integer),
+    Value > 0,
+    (   rdf(Log, eth:txTime, Date^^xsd:dateTime)
+    ;   (rdf(Log, eth:txHash, Txn),
+         atom(Txn),
+         rdf(Txn, eth:txTime, Date^^xsd:dateTime))
+    ).
+
+good_coin("DAI").
+good_coin("ETH").
+good_coin("MKR").
+good_coin("SAI").
+good_coin("USDC").
+good_coin("WETH").
 
 person_account(Person, Account) :-
     rdf(Person, eth:controlsAccount, Account).
@@ -1106,6 +1173,40 @@ person_date_log(Person, Date, Log) :-
 token_symbol(Token, Symbol) :-
     rdf(Token, erc20:symbol, Symbol^^xsd:string).
 
+log_symbol(Log, "ETH") :-
+    rdf(Log, eth:from, _),
+    rdf(Log, eth:to, _),
+    rdf(Log, eth:value, Value^^xsd:integer),
+    Value > 0.
+
+log_symbol(Log, Symbol) :-
+    rdf(Log, erc20:from, _),
+    rdf(Log, erc20:to, _),
+    rdf(Log, erc20:value, Value^^xsd:integer),
+    Value > 0,
+    rdf(Log, erc20:token, Token),
+    token_symbol(Token, Symbol).
+    
+log_good(Log) :-
+    log_symbol(Log, Symbol),
+    good_coin(Symbol).
+
+signature_kind0("transfer(address _to, uint256 _value)", "Transfer").
+signature_kind0("tokenToEthSwapInput(uint256 tokens_sold, uint256 min_eth, uint256 deadline)", "Trade (Uniswap)").
+signature_kind0("swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] path, address to, uint deadline)", "Trade (Uniswap)").
+signature_kind0("batchEthOutSwapExactIn(tuple[] swaps,address tokenIn,uint256 totalAmountIn,uint256 minTotalAmountOut)", "Trade (Uniswap)").
+signature_kind0("swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline)", "Trade (Uniswap)").
+signature_kind0("buy(uint256 _x, uint256 _y)", "Trade (Oasis)").
+signature_kind0("redeem()", "Upgrade").
+signature_kind0(eth, "Transfer").
+signature_kind0(-, "Transfer").
+
+signature_kind(S, S) :-
+    \+ signature_kind0(S, _).
+
+signature_kind(S, Kind) :-
+    signature_kind0(S, Kind).
+
 save_erc20_transfers(Address) :-
     forall(coin:etherscan_query_row(erc20_transfers(Address), Row),
            save(erc20(Row))).
@@ -1115,7 +1216,24 @@ save_eth_txs(Address) :-
             Row.isError = "0"),
            save(ethtx(Row))).
 
-log_row(Log, log(Date, Symbol, Amount, Debit, Credit, Sig)) :-
+save_eth_internal_txs(Address) :-
+    forall((coin:etherscan_query_row(txlistinternal(Address), Row),
+            Row.isError = "0"),
+           save(ethtx_internal(Row))).
+
+:- rdf_meta save_txs(t).
+
+save_txs(address(Address)) :-
+    save_eth_txs(Address),
+    save_eth_internal_txs(Address),
+    save_erc20_transfers(Address).
+
+save_txs(person(Person)) :-
+    person_account(Person, Account),
+    account_address(Account, Address),
+    save_txs(address(Address)).
+
+log_row(Log, log(Date, Log, Symbol, Amount, Debit, Credit, Kind)) :-
     rdf(Txn, eth:hasLogEntry, Log),
     rdf(Txn, eth:txTime, date_time(Y,M,D,H,Min,S,_)^^xsd:dateTime),
     date_time_stamp(date(Y,M,D,H,Min,S,0,-,-), Stamp),
@@ -1130,7 +1248,96 @@ log_row(Log, log(Date, Symbol, Amount, Debit, Credit, Sig)) :-
     -> true
     ;  Sig = (-)
     ),
+    signature_kind(Sig, Kind),
     Amount is Wad / 10^Decimals.
+
+log_row(Log, log(Date, Log, "ETH", Amount, Debit, Credit, Kind)) :-
+    rdf(Log, eth:txTime, date_time(Y,M,D,H,Min,S,_)^^xsd:dateTime),
+    date_time_stamp(date(Y,M,D,H,Min,S,0,-,-), Stamp),
+    format_time(atom(Date), "%Y-%m-%d %H:%M:%S", Stamp),
+    rdf(Log, eth:from, Debit),
+    rdf(Log, eth:to, Credit),
+    rdf(Log, eth:value, Wad^^xsd:integer),
+    signature_kind(eth, Kind),
+    Amount is Wad / 10^18.
+
+log_row(Log, log(Date, Log, "ETH", Amount, Debit, Credit, Kind)) :-
+    rdf(Log, eth:txHash, Txn),
+    atom(Txn),
+    rdf(Txn, eth:txTime, date_time(Y,M,D,H,Min,S,_)^^xsd:dateTime),
+    date_time_stamp(date(Y,M,D,H,Min,S,0,-,-), Stamp),
+    format_time(atom(Date), "%Y-%m-%d %H:%M:%S", Stamp),
+    rdf(Log, eth:from, Debit),
+    rdf(Log, eth:to, Credit),
+    rdf(Log, eth:value, Wad^^xsd:integer),
+    signature_kind(eth, Kind),
+    Amount is Wad / 10^18.
+
+:- rdf_meta row_with_signed_amount(?, r, ?).
+row_with_signed_amount(log(Date, Log, Symbol, Amount0, Debit, Credit, Kind), Address, Row) :-
+    (  Debit = Address
+    -> Amount is -Amount0
+    ,  Row = log(Date, Log, Symbol, Amount, Credit, Kind)
+    ;  Credit = Address
+    -> Amount = Amount0
+    ,  Row = log(Date, Log, Symbol, Amount, Debit, Kind)
+    ).
+
+log_txhash(Log, TxHash) :-
+    rdf(Log, eth:txHash, TxHash^^xsd:string).
+
+log_txhash(Log, TxHash) :-
+    rdf(Log, eth:txHash, Txn),
+    atom(Txn),
+    rdf(Txn, eth:txHash, TxHash^^xsd:string).
+
+row_with_links(log(Date, Log, Symbol, Amount, Counterparty, Kind), Row) :-
+    log_txhash(Log, TxHash),
+    format(string(TxnLink), "https://etherscan.io/tx/~w", [TxHash]),
+    rdf(Counterparty, eth:address, Address^^xsd:string),
+    format(string(AddressLink), "https://etherscan.io/address/~w", [Address]),
+    Row = row(Date, Symbol, Amount, Address, Kind, TxnLink, AddressLink).
+
+row_symbol_columns(row(_, "MKR", X, _, _, _, _), [X, "", "", "", "", ""]).
+row_symbol_columns(row(_, "ETH", X, _, _, _, _), ["", "", X, "", "", ""]).
+row_symbol_columns(row(_, "WETH", X, _, _, _, _), ["", "", X, "", "", ""]).
+row_symbol_columns(row(_, "USDC", X, _, _, _, _), ["", "", "", "", X, ""]).
+
+row_ultimate(Row0, Row) :-
+    row_symbol_columns(Row0, [MKR, MKRBalance, ETH, ETHBalance, USDC, USDCBalance]),
+    Row0 = row(Date, _, _, _, Kind, TxnLink, AddressLink),
+    Row = row(Date, MKR, MKRBalance, ETH, ETHBalance, USDC, USDCBalance, Kind, TxnLink, AddressLink).
+                   
+log_csvrow(Log, Account, Row) :-
+    log_good(Log),
+    log_row(Log, Row0),
+    \+ rdf(Log, eth:from, nt:'WETH'),
+    row_with_signed_amount(Row0, Account, Row1),
+    row_with_links(Row1, Row2),
+    row_ultimate(Row2, Row).
+
+account_date_csvrow(Account, Date, CSVRow) :-
+    account_date_log(Account, Date, Log),
+    log_csvrow(Log, Account, CSVRow).
+
+account_csvrows_chronological(Account, Rows) :-
+    findall(Date-Row, account_date_csvrow(Account, Date, Row), Rows0),
+    keysort(Rows0, Sorted),
+    pairs_values(Sorted, Rows).
+
+:- use_module(library(csv)).
+
+:- rdf_meta write_account_csv(r, ?).
+write_account_csv(Account, stream(Stream)) :-
+    account_csvrows_chronological(Account, Rows),
+    format(Stream, "# Date, MKR, MKR Balance, ETH, ETH Balance, USDC, USDC Balance, Kind, Counterparty, Txn~n", []),
+    csv_write_stream(Stream, Rows, [functor(row)]).
+
+write_account_csv(Account, file(File)) :-
+    setup_call_cleanup(
+        open(File, write, Stream),
+        write_account_csv(Account, stream(Stream)),
+        close(Stream)).
 
 :- rdf_meta etherscan_person_address(r, ?).
 etherscan_person_address(Person, Address) :-
@@ -1140,5 +1347,6 @@ etherscan_person_address(Person, Address) :-
 
 deny_ethereum_resources(T) :-
     coin_type(T),
-    forall(nuke(T, _S), true).
+    forall(nuke(T, _S), true),
+    deny(_, eth:address, _).
 

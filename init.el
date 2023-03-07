@@ -57,8 +57,7 @@
 ;; Builtin global modes.
 (progn
   (global-auto-revert-mode)
-  (global-whitespace-cleanup-mode)
-  (global-hl-line-mode))
+  (global-whitespace-cleanup-mode))
 
 (defmacro save-column (&rest body)
   `(let ((column (current-column)))

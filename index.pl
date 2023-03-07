@@ -51,6 +51,7 @@ static(Path, File) :-
 
 :- static('index.js', 'web/dist/index.js').
 :- static('tau-prolog.js', 'web/tau-prolog.js').
+:- static('mbrock.csv', 'mbrock.secret.csv').
 
 :- use_module(library(http/websocket)).
 

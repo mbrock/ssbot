@@ -38,6 +38,12 @@ etherscan_params(txlist(Address), Page) -->
     [action=txlist],
     [address=Address].
 
+etherscan_params(txlistinternal(Address), Page) -->
+    etherscan_base_params(Page),
+    [module=account],
+    [action=txlistinternal],
+    [address=Address].
+
 etherscan_base_params(Page) -->
     etherscan_api_token,
     {etherscan_page_size(PageSize)},

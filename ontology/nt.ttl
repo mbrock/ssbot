@@ -288,14 +288,6 @@ nt:readwiseId a owl:DatatypeProperty ;
     rdfs:domain as:Object ;
     rdfs:range xsd:integer .
 
-nt:ethereum a as:Service ;
-    as:name "Ethereum" ;
-    as:url <https://ethereum.org> .
-
-eth:address nt:idScope nt:ethereum .
-eth:txHash nt:idScope nt:ethereum .
-erc20:symbol nt:idScope nt:ethereum .
-
 nt:payload a owl:DatatypeProperty ;
     rdfs:label "payload" ;
     rdfs:domain as:Object ;
@@ -347,3 +339,135 @@ vcard:street-address nt:secrecy nt:secret .
 vcard:hasTelephone nt:secrecy nt:secret .
 vcard:bday nt:secrecy nt:secret .
 
+# * Financial data
+
+nt:Blockchain a rdfs:Class ;
+    rdfs:subClassOf as:Service ;
+    rdfs:label "Blockchain" ;
+    rdfs:comment "A blockchain is a distributed ledger that records transactions between two parties."@en .
+
+nt:ethereum a nt:Blockchain ;
+    rdfs:label "Ethereum" ;
+    rdfs:comment "The mainnet of the Ethereum blockchain."@en .
+
+nt:Coin a rdfs:Class ;
+    rdfs:subClassOf as:Object ;
+    rdfs:label "Coin" ;
+    rdfs:comment "A coin is a quantized token that can be used to pay for goods and services, for example a cryptocurrency or a state currency."@en .
+
+nt:issuedBy a owl:ObjectProperty ;
+    rdfs:domain nt:Coin ;
+    rdfs:range as:Object .
+
+nt:symbol a owl:DatatypeProperty ;
+    rdfs:label "symbol" ;
+    rdfs:domain nt:Coin ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The symbol of the coin, e.g. BTC for Bitcoin."@en .
+
+nt:decimals a owl:DatatypeProperty ;
+    rdfs:domain nt:Coin ;
+    rdfs:range xsd:integer .
+
+nt:Coinbase a as:Organization ;
+    rdfs:label "Coinbase" ;
+    rdfs:comment "Coinbase is a cryptocurrency exchange and wallet service."@en.
+
+nt:MakerDAO a as:Organization ;
+    rdfs:label "MakerDAO" ;
+    rdfs:comment "MakerDAO is a decentralized autonomous organization that manages the Dai stablecoin."@en .
+
+nt:ETH a nt:Coin ;
+    rdfs:label "Ether" ;
+    rdfs:comment "The gas and staking token of the Ethereum mainnet."@en ;
+    nt:issuedBy nt:ethereum ;
+    nt:platform nt:ethereum ;
+    nt:symbol "ETH" ;
+    nt:decimals 18 ;
+    .
+
+nt:MKR a nt:Coin ;
+    rdfs:label "Maker" ;
+    rdfs:comment "The governance token of the MakerDAO protocol."@en ;
+    nt:issuedBy nt:MakerDAO ;
+    nt:platform nt:ethereum ;
+    nt:symbol "MKR" ;
+    nt:decimals 18 ;
+    .
+
+nt:WETH a nt:Coin ;
+    rdf:type erc20:ERC20Token ;
+    rdfs:label "Wrapped Ether" ;
+    rdfs:comment "A tokenized version of Ether."@en ;
+    nt:issuedBy nt:ethereum ;
+    nt:platform nt:ethereum ;
+    nt:symbol "WETH" ;
+    eth:address "0xecf8f87f810ecf450940c9f60066b4a7a501d6a7" ;
+    erc20:decimals 18 ;
+    erc20:name "Wrapped Ether" ;
+    erc20:symbol "WETH" ;
+    .
+
+nt:DAI a nt:Coin ;
+    rdfs:label "Dai" ;
+    rdfs:comment "The stablecoin of the MakerDAO protocol."@en ;
+    nt:issuedBy nt:MakerDAO ;
+    nt:platform nt:ethereum ;
+    nt:symbol "DAI" ;
+    nt:decimals 18 ;
+    .
+
+nt:USDC a nt:Coin ;
+    rdfs:label "USD Coin" ;
+    rdfs:comment "A fully collateralized US dollar stablecoin issued by Coinbase."@en ;
+    nt:issuedBy nt:Coinbase ;
+    nt:platform nt:ethereum ;
+    nt:symbol "USDC" ;
+    nt:decimals 6 ;
+    .
+
+nt:Value a rdfs:Class ;
+    rdfs:label "Value" ;
+    rdfs:comment "A value is a quantity of a coin."@en .
+
+nt:amount a owl:DatatypeProperty ;
+    rdfs:domain nt:Value ;
+    rdfs:range xsd:decimal .
+
+nt:coin a owl:ObjectProperty ;
+    rdfs:domain nt:Value ;
+    rdfs:range nt:Coin .
+
+nt:Account a rdfs:Class ;
+    rdfs:label "Account" ;
+    rdfs:comment "An account is a record of a party's financial transactions."@en .
+
+nt:Entry a rdfs:Class ;
+    rdfs:label "Entry" ;
+    rdfs:comment "An entry is a noted change in the value of an account."@en .
+
+nt:Debit a rdfs:Class ;
+    rdfs:label "Debit" ;
+    rdfs:comment "A debit is an entry that decreases an account balance."@en ;
+    rdfs:subClassOf nt:Entry .
+
+nt:Credit a rdfs:Class ;
+    rdfs:label "Credit" ;
+    rdfs:comment "A credit is an entry that increases an account balance."@en ;
+    rdfs:subClassOf nt:Entry .
+
+nt:value a owl:ObjectProperty ;
+    rdfs:domain nt:Entry ;
+    rdfs:range nt:Value .
+
+nt:account a owl:ObjectProperty ;
+    rdfs:domain nt:Entry ;
+    rdfs:range nt:Account .
+
+nt:Transaction a rdfs:Class ;
+    rdfs:label "Transaction" ;
+    rdfs:comment "A transaction is a transfer of value between two or more accounts."@en .
+
+eth:txHash nt:idScope nt:ethereum .
+eth:address nt:idScope nt:ethereum .
+erc20:symbol nt:idScope nt:ethereum .

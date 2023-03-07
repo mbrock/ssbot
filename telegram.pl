@@ -62,3 +62,4 @@ print_update(T, Update) :-
     ansi_format([fg(blue)], "~w~n~n", [Text]).
 
 
+
