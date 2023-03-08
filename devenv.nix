@@ -70,6 +70,7 @@ in {
     ripgrep
     tmux
     scryer-prolog
+    redis
   ]);
 
   enterShell = ''

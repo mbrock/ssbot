@@ -99,3 +99,131 @@ ontologies or vocabularies.
 We don't need to load the Schema.org vocabulary.  But we might as
 well.  Parsing Turtle is easy.  It's just a few lines of code
 with DCGs.
+
+
+* Social Media Platform Integration
+
+Node.Town inhabits the social media landscape.  It connects to
+Telegram, Discord, Slack, Gmail, GitHub, Mastodon, Urbit, NNTP, IRC,
+=finger=, =whois=, =gopher=, =talk=, BBSes, BitTorrent, Bitcoin,
+Ethereum, Readwise, Roam Research, the Stanford "Protege"
+collaborative formal ontology environment, GNU Social, GNU Mailman,
+GNU Emacs, GNU Guix, GNU Make, GNU Prolog, and so on.
+
+It reads and writes to all of these platforms.  It archives everything
+in a unified knowledge graph, creating links between them.  It learns
+from the data, and we can ask it questions, correct its mistakes,
+and teach it new things.
+
+Now, having all of these connections in a single program may be too
+much.  It may be better to have a separate program for each platform.
+But that is operationally complex.  It's hard to keep track of
+all of the different programs and their dependencies.  It's hard to
+keep them all up to date.  It's hard to keep them all running.
+
+But consider Erlang and OTP.  It's a single runtime that can run
+multiple processes which are isolated from each other like separate
+programs.  But in practice, I have found myself restarting the whole
+runtime when I want to restart a single process.  It's not as
+convenient as I would like.  It's not as nimble as I would like.
+
+A message queue is a good way to decouple processes.  But it's not
+enough.  We need a way to share data between them.  We need a way to
+share state.  We need a way to share knowledge.
+
+We need a way to share a knowledge graph.
+
+* Knowledge Graphs as a Service
+
+We need a way to share a knowledge graph.  We need a way to share
+a knowledge graph as a service.  We need a way to share a knowledge
+graph as a service that is nimble, supple, and joyful.
+
+How can we do this?  How can we share a knowledge graph as a service
+that is nimble, supple, and joyful?
+
+We can use Prolog.  We can use Prolog to share a knowledge graph as a
+service that is nimble, supple, and joyful.
+
+The neat thing about having a knowledge graph in Prolog is that it
+integrates with the logic of the program, with backtracking and
+failure, side effects, and so on.  We don't have to write complex
+queries in some other language.  We can just write them in Prolog.
+
+Now consider connecting Telegram to Node.Town.  We will use the Bot
+API to send messages and receive updates.  Upon receiving an update,
+we will parse it and store it in the knowledge graph.  But this is not
+as simple as it sounds.  We need to handle all of the different types
+of updates, and we need to handle them in a way that is consistent
+with the rest of the program.
+
+Mapping platform-specific update structures into semantic triples is
+not trivial; it requires considerable thought and care.  We will
+certainly change the way we do this over time.  So that code will not
+be fixed in stone.
+
+But just receiving the updates and doing basic protocol logic is more
+well-defined.  We can write that in a way that is more fixed in stone.
+For Telegram, this just means polling the Bot API for updates, and
+saving each update's JSON payload in the knowledge graph.
+
+* Microservices, Monorepos, Monoliths, Microliths
+
+I like the idea of running our own =init= process.  I mean, =devenv=
+is already an =init= process.  It's weird how these process managers
+never support TTY multiplexing.  I mean, =tmux= is an =init= process?
+
+The Telegram ingestion process should be in a separate pane in =tmux=.
+It should be a separate process.  It should be a separate process
+that is nimble, supple, and joyful.
+
+Let's think about failure modes.  What happens if the Telegram
+ingestion process crashes?  What happens if it gets stuck in an
+infinite loop?  We need some notification mechanism.  We need some
+way to restart it.
+
+Wait.  Let's think about this.  Ingesting from Telegram should be
+a simple =bash= script using =curl= and =jq=.
+
+Let's write some =bash= functions and try running them using
+=org-babel=.
+
+#+BEGIN_SRC bash :results output
+  set -ex
+  skip() { echo >&2 "(skipping $1)"; cat; }
+
+  redis-stream-push() { read -r x ; redis-cli xadd "$1" \* $*; }
+
+  redis-stream-last() {
+    redis-cli --raw xrevrange "$1" + - + count 1 | tail -n +3
+  }
+
+  token=$TELEGRAM_BOT_TOKEN
+  stream=telegram:$token:updates
+
+  telegram-last() { redis-stream-last "$stream" || echo 0; }
+
+  telegram-next() {
+      last=$(telegram-last)
+      next=$((last + 1))
+      echo "$next"
+  }
+
+  telegram-poll() {
+    offset=$(telegram-next)
+    curl -s "https://api.telegram.org/bot$token/getUpdates" \
+      -d offset=$offset -d limit=100  -d timeout=60 \
+    | skip jq -r '.result[]'
+  }
+
+  telegram-poll
+#+END_SRC
+
+#+RESULTS:
+: {"ok":false,"error_code":404,"description":"Not Found"}
+
+* Urbit Star
+
+Node.Town is =~nodfur=, a star in the Urbit network.
+
+As a Node.Town member, you possess a =~nodfur= planet.

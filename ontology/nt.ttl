@@ -399,7 +399,6 @@ nt:WETH a nt:Coin ;
     rdf:type erc20:ERC20Token ;
     rdfs:label "Wrapped Ether" ;
     rdfs:comment "A tokenized version of Ether."@en ;
-    nt:issuedBy nt:ethereum ;
     nt:platform nt:ethereum ;
     nt:symbol "WETH" ;
     eth:address "0xecf8f87f810ecf450940c9f60066b4a7a501d6a7" ;

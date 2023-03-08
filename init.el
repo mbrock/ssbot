@@ -147,6 +147,8 @@
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
    '("23621fdae219f1d49f831789073af07fbcd7ea67223688aacfdc91acaf394fa3" "1ecd6ec06003d01d836627631850716b12949f85d86428f916c58a2ba8937d13" "e7bae1e5baa33d1d36a90a2ce11e446e4fe57d0949d3c3597d7b46dd80e03830" default))
+ '(org-babel-load-languages '((shell . t)))
+ '(org-confirm-babel-evaluate nil)
  '(package-selected-packages
    '(yaml-mode zig-mode zenburn-theme whitespace-cleanup-mode vterm vertico typescript-mode sweeprolog s rainbow-delimiters projectile-ripgrep paredit orderless nix-mode marginalia magit flycheck elixir-mode eglot editorconfig direnv default-text-scale company))
  '(prolog-char-quote-workaround t)
@@ -286,5 +288,9 @@
         '((file (styles partial-completion)))))
 
 
-;; make dired show file sizes in human readable format
-(setq dired-listing-switches "-alh")
+(setq dired-listing-switches "-alh --group-directories-first")
+
+
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '((shell . t)))
