@@ -227,3 +227,14 @@ Let's write some =bash= functions and try running them using
 Node.Town is =~nodfur=, a star in the Urbit network.
 
 As a Node.Town member, you possess a =~nodfur= planet.
+
+
+* Trealla Prolog
+
+Trealla Prolog is a Prolog interpreter written in C.
+
+The GitHub repository is at https://github.com/trealla-prolog/trealla.
+
+It's also available as an =npm= package called =trealla=.
+
+I wonder if it has a DOM binding, or anything besides =WASI=?

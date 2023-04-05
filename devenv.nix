@@ -67,6 +67,8 @@ in {
     imagemagick
     jless
     jq
+    lynx
+    libxml2 # for xmllint
     ripgrep
     tmux
     scryer-prolog

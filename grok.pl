@@ -34,7 +34,17 @@
            row_with_links/2,
            write_account_csv/2,
            save_eth_internal_txs/1,
-           save_txs/1
+           save_txs/1,
+           wikivoyage/1,
+           world_page/2,
+           page_title/2,
+           element_child/2,
+           world_page/1,
+           page_revision/2,
+           world_title_text/2,
+           page_lines/3,
+           page_term/3,
+           wikiterm/3
           ]).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(semweb/rdf_db), []).
@@ -1350,3 +1360,76 @@ deny_ethereum_resources(T) :-
     forall(nuke(T, _S), true),
     deny(_, eth:address, _).
 
+% Let's load the XML dump of articles from Wikivoyage.
+% I want to take the page on Rome, Italy, and extract the
+% text as a tree-structured term.
+
+% First we'll import the SGML library.
+:- use_module(library(sgml)).
+
+% Then we'll load the XML file.
+wikivoyage(World) :-
+    nb_current(wikivoyage, World),
+    !.
+
+wikivoyage(World) :-
+    load_xml('wikivoyage-en.xml', World, []),
+    nb_setval(wikivoyage, World).
+
+world_page([element(mediawiki, _, Things)], Page) :-
+    member(Page, Things),
+    Page = element(page, _, _).
+
+world_page(Page) :-
+    wikivoyage(World),
+    world_page(World, Page).
+
+page_title(Page, Title) :-
+    Page = element(page, _, Things),
+    member(element(title, _, [Title]), Things).    
+
+element_child(element(_, _, Children), Child) :-
+    member(Child, Children),
+    dif(Child, '\n     '),
+    dif(Child, '\n    '),
+    dif(Child, '\n      ').
+
+page_revision(Page, Revision) :-
+    element_child(Page, Revision),
+    Revision = element(revision, _, _).
+
+revision_text(Revision, Text) :-
+    element_child(Revision, Child),
+    Child = element(text, _, [Atom]),
+    atom_codes(Atom, Text).
+
+world_title_text(Title, Text) :-
+    world_page(Page),
+    page_title(Page, Title),
+    page_revision(Page, Revision),
+    revision_text(Revision, Text).
+
+:- portray_text(true).
+
+% Now we'll use a DCG to parse the text.
+
+:- use_module(library(dcg/basics)).
+
+page_tokens([]) --> [].
+page_tokens([Tokens]) -->
+    eol,
+    page_tokens(Tokens).
+page_tokens([text(Text)|Tokens]) -->
+    string_without("\n", Text),
+    page_tokens(Tokens).
+
+wikiterm([]) --> "".
+wikiterm([gadget(Term)|Terms]) -->
+    "{{", !,
+    wikiterm(Term),
+    "}}", !,
+    wikiterm(Terms).
+
+wikiterm([text(Text)|Terms]) -->
+    string_without("{{", Text),
+    wikiterm(Terms).
